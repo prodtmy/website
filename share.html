@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tmy — PRIVATE BEAT LINK</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#F5F5F7',
+            card: '#FFFFFF',
+            primary: '#1D1D1F',
+            muted: '#86868B',
+            subtle: '#E8E8ED',
+            darker: '#D2D2D7',
+          },
+          fontFamily: {
+            mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&display=swap');
+    body { font-family: 'Geist Mono', monospace; background-color: #F5F5F7; color: #1D1D1F; margin: 0; display: flex; flex-direction: column; min-height: 100vh; }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+  <!-- Logo -->
+  <header class="absolute top-6 left-6 flex items-baseline gap-4">
+    <h1 class="text-lg font-bold tracking-tighter">tmy</h1>
+    <span class="text-[10px] uppercase text-muted tracking-widest hidden sm:inline">// SECURE DELIVERY</span>
+  </header>
+
+  <main id="content" class="w-full max-w-lg bg-card border border-subtle p-6 md:p-8 rounded-lg shadow-2xl relative overflow-hidden">
+    <div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+    
+    <div class="flex flex-col items-center text-center space-y-6">
+      
+      <!-- Track Meta -->
+      <div class="space-y-1">
+        <h2 id="title" class="text-xl md:text-2xl font-bold uppercase tracking-wide">LOADING...</h2>
+        <div class="flex flex-wrap items-center justify-center gap-2 text-xs text-muted uppercase">
+          <span id="bpm">---</span> BPM // 
+          <span id="key">---</span> 
+          <span id="type" class="border border-subtle px-1.5 py-0.5 rounded text-[9px] ml-1">BEAT</span>
+        </div>
+      </div>
+      
+      <!-- Player -->
+      <div class="w-full bg-surface border border-subtle rounded-lg p-6 flex flex-col items-center gap-6">
+        <button id="play-btn" class="w-16 h-16 rounded-full border border-darker flex items-center justify-center text-primary hover:bg-black/5 hover:scale-105 transition-all focus:outline-none touch-target">
+          <svg id="play-icon" class="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="pause-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+      </div>
+      
+    </div>
+  </main>
+  
+  <footer class="absolute bottom-6 text-[10px] text-muted text-center uppercase tracking-widest">
+    © 2026 TMY ARCHIVE // CONFIDENTIAL PREVIEW
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const base64Data = urlParams.get('data');
+      if (!base64Data) {
+        document.getElementById('content').innerHTML = '<div class="text-xs text-muted text-center py-10 uppercase tracking-widest">INVALID OR MISSING LINK DATA</div>';
+        return;
+      }
+      
+      try {
+        const trackStr = decodeURIComponent(atob(base64Data));
+        const track = JSON.parse(trackStr);
+        
+        document.getElementById('title').innerText = track.title || 'UNTITLED';
+        document.getElementById('bpm').innerText = track.bpm || '---';
+        document.getElementById('key').innerText = track.key || '---';
+        document.getElementById('type').innerText = track.trackType || 'BEAT';
+        
+        let isPlaying = false;
+        let audio = new Audio(track.src);
+        
+        const playBtn = document.getElementById('play-btn');
+        const playIcon = document.getElementById('play-icon');
+        const pauseIcon = document.getElementById('pause-icon');
+        
+        playBtn.addEventListener('click', () => {
+          if (isPlaying) {
+            audio.pause();
+            isPlaying = false;
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+          } else {
+            audio.play().catch(e => alert("Error playing track: " + e.message));
+            isPlaying = true;
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+          }
+        });
+        
+        audio.addEventListener('ended', () => {
+          isPlaying = false;
+          playIcon.classList.remove('hidden');
+          pauseIcon.classList.add('hidden');
+        });
+        
+      } catch(e) {
+        document.getElementById('content').innerHTML = '<div class="text-xs text-red-500 text-center py-10 uppercase tracking-widest">CORRUPTED LINK DATA</div>';
+        console.error(e);
+      }
+    });
+  </script>
+</body>
+</html>

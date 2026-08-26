@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tmy — ADMIN CONTROL PANEL</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#F5F5F7',
+            card: '#FFFFFF',
+            primary: '#1D1D1F',
+            muted: '#86868B',
+            subtle: '#E8E8ED',
+            darker: '#D2D2D7',
+            online: '#34C759',
+            'accent-red': '#FF3B30',
+          },
+          fontFamily: {
+            mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-surface text-primary font-mono antialiased min-h-screen flex flex-col justify-between select-none" id="admin-dashboard">
+
+  <!-- Admin Top Header -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-subtle">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="font-bold text-lg text-primary tracking-tight">tmy</a>
+        <span class="text-xs text-muted font-bold">// MASTER CONTROL</span>
+      </div>
+      
+      <!-- Current Authenticated User -->
+      <div class="flex items-center gap-4 text-xs">
+        <span class="text-primary font-bold hidden sm:inline" id="admin-user-tag">ADMIN [ACTIVE]</span>
+        <button id="admin-logout-btn" class="text-muted hover:text-primary transition-colors touch-target">[ LOGOUT ]</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Admin Layout: Sidebar + Workspace -->
+  <main class="flex-1 w-full max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-56 flex-shrink-0 flex flex-row md:flex-col gap-2 border-b md:border-b-0 md:border-r border-subtle pb-4 md:pb-0 md:pr-6 overflow-x-auto custom-scrollbar">
+      <button id="menu-vault" class="flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors bg-primary text-white touch-target flex items-center gap-2 whitespace-nowrap">
+        <span>🎛️</span>
+        <span>[ VAULT MANAGER ]</span>
+      </button>
+      <button id="menu-upload" class="flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors text-muted hover:text-primary hover:bg-black/5 touch-target flex items-center gap-2 whitespace-nowrap">
+        <span>📁</span>
+        <span>[ ASSET UPLOAD ]</span>
+      </button>
+      <button id="menu-users" class="flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors text-muted hover:text-primary hover:bg-black/5 touch-target flex items-center gap-2 whitespace-nowrap">
+        <span>👥</span>
+        <span>[ USERS ]</span>
+      </button>
+      <button id="menu-analytics" class="flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors text-muted hover:text-primary hover:bg-black/5 touch-target flex items-center gap-2 whitespace-nowrap">
+        <span>📊</span>
+        <span>[ ANALYTICS ]</span>
+      </button>
+    </aside>
+
+    <!-- Workspace Content Panels -->
+    <section class="flex-1 min-w-0">
+      
+      <!-- TAB 1: INTEGRATED VAULT MANAGER (Default) -->
+      <div id="view-vault" class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-widest text-primary">[ VAULT GOVERNANCE // LIVE ACCESS EDITOR ]</h2>
+            <p class="text-xs text-muted mt-1">Listen to beats and directly modify user permissions or visibility in real-time.</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-muted uppercase font-bold">FILTER:</span>
+            <select id="admin-vault-filter" class="bg-card border border-subtle text-xs px-2.5 py-1.5 focus:outline-none focus:border-primary font-mono rounded">
+              <option value="ALL">ALL TRACKS (PUBLIC & PRIVATE)</option>
+              <option value="PUBLIC">PUBLIC ONLY</option>
+              <option value="PRIVATE">PRIVATE ONLY</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Track List Container for Admin -->
+        <div class="bg-card rounded-lg border border-subtle divide-y divide-subtle overflow-hidden" id="admin-vault-tracklist">
+          <!-- Dynamically injected via app.js -->
+        </div>
+      </div>
+
+      <!-- TAB 2: ASSET UPLOAD -->
+      <div id="view-upload" class="hidden space-y-6">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-widest text-primary">[ ASSET UPLOAD // MEDIA DEPLOYMENT ]</h2>
+          <p class="text-xs text-muted mt-1">Upload audio previews, uncompressed WAVs, stem archives (.ZIP) or FL Studio project files (.FLP).</p>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div id="drag-drop-zone" class="dropzone p-8 sm:p-12 text-center rounded-lg bg-card cursor-pointer relative group flex flex-col items-center justify-center gap-3">
+          <input type="file" id="file-upload-input" class="absolute inset-0 opacity-0 cursor-pointer" />
+          <svg class="w-8 h-8 text-muted group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+          <span class="text-xs font-bold uppercase tracking-wider text-primary" id="dropzone-filename">DRAG & DROP AUDIO (WAV/MP3), ZIP, FLP OR MP4 HERE</span>
+          <span class="text-[10px] text-muted">OR CLICK TO BROWSE LOCAL FILES</span>
+        </div>
+
+        <!-- Upload Progress Bar (Animated) -->
+        <div id="upload-progress-container" class="hidden space-y-1">
+          <div class="flex items-center justify-between text-[11px] font-mono text-primary font-bold">
+            <span>TRANSMITTING ASSET TO VAULT...</span>
+            <span>UPLOADING</span>
+          </div>
+          <div class="w-full h-2 bg-subtle rounded-full overflow-hidden">
+            <div id="upload-progress-bar" class="h-full bg-primary transition-all duration-150" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Metadata Form -->
+        <form id="asset-metadata-form" class="bg-card p-6 rounded-lg border border-subtle space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ TRACK TITLE ]</label>
+              <input type="text" id="asset-title" required placeholder="e.g. CYBER_PUNK_140" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ BPM ]</label>
+              
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ TYPE ]</label>
+              <select id="asset-type" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono">
+                <option value="BEAT">BEAT</option>
+                <option value="LOOP">LOOP</option>
+                <option value="IDEA">IDEA</option>
+                
+              </select>
+            </div>
+            <input type="number" id="asset-bpm" required value="140" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ KEY ]</label>
+              <input type="text" id="asset-key" required value="F# MIN" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ TARGET VAULT ]</label>
+              <select id="asset-destination" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono">
+                <option value="PUBLIC">PUBLIC VAULT (All Authorized Users)</option>
+                <option value="PRIVATE">PRIVATE VAULT (Assigned User Only)</option>
+              </select>
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ ASSIGN TO USER (DROPDOWN) ]</label>
+              <select id="asset-assigned-user" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono">
+                <!-- Dynamically populated with all registered users -->
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-primary text-white text-xs font-bold py-3 hover:bg-black transition-colors uppercase tracking-widest touch-target">
+            [ DEPLOY ASSET TO VAULT ]
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 3: USER MANAGEMENT -->
+      <div id="view-users" class="hidden space-y-6">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-widest text-primary">[ USER MANAGEMENT // ACCESS GOVERNANCE ]</h2>
+          <p class="text-xs text-muted mt-1">Manage client passwords, revoke sector keys, or issue new restricted clearance.</p>
+        </div>
+
+        <!-- Users Table Container -->
+        <div class="bg-card rounded-lg border border-subtle overflow-hidden">
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-surface border-b border-subtle text-[10px] font-bold uppercase text-muted">
+                  <th class="py-2.5 px-4">NAME / CLIENT</th>
+                  <th class="py-2.5 px-4">KEY</th>
+                  <th class="py-2.5 px-4">ROLE</th>
+                  <th class="py-2.5 px-4">STATUS</th>
+                  <th class="py-2.5 px-4 text-right">ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="user-table-body">
+                <!-- Dynamically injected via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Create User Form -->
+        <form id="create-user-form" class="bg-card p-6 rounded-lg border border-subtle space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-primary">[ CREATE NEW USER ]</h3>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ CLIENT NAME ]</label>
+              <input type="text" id="new-user-name" required placeholder="e.g. Drake, Gunna, ProducerX..." class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ ROLE ]</label>
+              <select id="new-user-role" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono">
+                <option value="ARTIST (FULL ACCESS)">ARTIST (FULL ACCESS)</option>
+                <option value="ARTIST">ARTIST (Private Vault Only, No Public)</option>
+                <option value="VIP">VIP (High Priority Collab)</option>
+                <option value="PRODUCER">PRODUCER (Upload Access)</option>
+                <option value="ADMIN">ADMIN (Full Governance)</option>
+              </select>
+            </div>
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold uppercase text-primary">[ ASSIGN ACCESS KEY ]</label>
+              <input type="text" id="new-user-key" required placeholder="e.g. KEY2026_XYZ" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" />
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-primary text-white text-xs font-bold py-3 hover:bg-black transition-colors uppercase tracking-widest touch-target">
+            [ GENERATE USER CREDENTIALS ]
+          </button>
+        </form>
+      </div>
+
+      <!-- TAB 4: ANALYTICS -->
+      <div id="view-analytics" class="hidden space-y-6">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-widest text-primary">[ ANALYTICS // TELEMETRY & LOGS ]</h2>
+          <p class="text-xs text-muted mt-1">Real-time stats on stems downloaded, active sessions, and n8n webhook dispatches.</p>
+        </div>
+
+        <!-- Metric Stat Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-card p-5 rounded-lg border border-subtle">
+            <span class="text-[10px] text-muted uppercase font-bold">TOTAL STEMS DOWNLOADED</span>
+            <div class="text-2xl font-bold text-primary mt-1">1,482</div>
+            <span class="text-[10px] text-online font-bold">+18% this week</span>
+          </div>
+          <div class="bg-card p-5 rounded-lg border border-subtle">
+            <span class="text-[10px] text-muted uppercase font-bold">ACTIVE VAULT SESSIONS</span>
+            <div class="text-2xl font-bold text-primary mt-1">42</div>
+            <span class="text-[10px] text-muted font-mono">7-day persistence active</span>
+          </div>
+          <div class="bg-card p-5 rounded-lg border border-subtle">
+            <span class="text-[10px] text-muted uppercase font-bold">CLEARANCE REQUESTS</span>
+            <div class="text-2xl font-bold text-primary mt-1">9</div>
+            <span class="text-[10px] text-accent-red font-bold">3 pending review</span>
+          </div>
+        </div>
+
+        <!-- Audit Log -->
+        <div class="bg-card rounded-lg border border-subtle p-5 space-y-3 font-mono text-xs">
+          <span class="text-xs font-bold uppercase tracking-wider text-primary">[ RECENT ACCESS DISPATCHES ]</span>
+          <div class="space-y-2 text-[11px] text-muted pt-2 divide-y divide-subtle">
+            <div class="pt-2 flex justify-between">
+              <span>[2026-08-21 16:42] MARIUS authenticated via sector key</span>
+              <span class="text-online">SUCCESS</span>
+            </div>
+            <div class="pt-2 flex justify-between">
+              <span>[2026-08-21 15:10] LTMRX downloaded STEMS (.ZIP) for OBSIDIAN_03</span>
+              <span class="text-online">DISPATCHED</span>
+            </div>
+            <div class="pt-2 flex justify-between">
+              <span>[2026-08-21 14:02] UNKNOWN key attempt: XYZ99</span>
+              <span class="text-accent-red">DENIED</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  
+  <!-- EDIT TRACK MODAL -->
+  <div id="edit-track-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="bg-card w-full max-w-md p-6 border border-subtle relative shadow-2xl">
+      <button id="close-edit-track" class="absolute top-4 right-4 text-muted hover:text-primary transition-colors touch-target">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+      <h3 class="text-xs font-bold uppercase tracking-wider text-primary mb-6">[ EDIT ASSET ]</h3>
+      
+      <form id="edit-track-form" class="space-y-4">
+        <input type="hidden" id="edit-track-id" />
+        <input type="hidden" id="edit-track-ispublic" />
+        
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold uppercase text-primary">[ TITLE ]</label>
+          <input type="text" id="edit-track-title" required class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" />
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4">
+          <div class="space-y-1">
+            <label class="text-[11px] font-bold uppercase text-primary">[ BPM ]</label>
+            
+          <div class="space-y-1">
+            <label class="text-[11px] font-bold uppercase text-primary">[ TYPE ]</label>
+            <select id="edit-track-type" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono">
+              <option value="BEAT">BEAT</option>
+              <option value="LOOP">LOOP</option>
+              <option value="IDEA">IDEA</option>
+                
+            </select>
+          </div>
+            <input type="number" id="edit-track-bpm" required class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-[11px] font-bold uppercase text-primary">[ KEY ]</label>
+            <input type="text" id="edit-track-key" required class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" />
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold uppercase text-primary">[ CREDITS ]</label>
+          <input type="text" id="edit-track-credits" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" />
+        </div>
+        
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold uppercase text-primary">[ AUDIO FILE (.WAV/.MP3) ]</label>
+          <input type="file" id="edit-track-file" accept="audio/*" class="w-full bg-surface border border-subtle text-xs p-2 focus:outline-none focus:border-primary font-mono" />
+          <p class="text-[10px] text-muted">Leave empty to keep current file.</p>
+        </div>
+
+        <button type="submit" class="w-full bg-primary text-white text-xs font-bold py-3 mt-2 hover:bg-black transition-colors uppercase tracking-widest touch-target">
+          [ SAVE CHANGES ]
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT USER MODAL -->
+  <div id="edit-user-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="bg-card w-full max-w-sm p-6 border border-subtle relative shadow-2xl">
+      <button id="close-edit-user" class="absolute top-4 right-4 text-muted hover:text-primary transition-colors touch-target">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+      <h3 class="text-xs font-bold uppercase tracking-wider text-primary mb-6">[ EDIT USER ]</h3>
+      
+      <form id="edit-user-form" class="space-y-4">
+        <input type="hidden" id="edit-user-id" />
+        
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold uppercase text-primary">[ CLIENT NAME ]</label>
+          <input type="text" id="edit-user-name" required class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono" />
+        </div>
+        
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold uppercase text-primary">[ ROLE ]</label>
+          <select id="edit-user-role" class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono">
+            <option value="ARTIST (FULL ACCESS)">ARTIST (FULL ACCESS)</option>
+            <option value="ARTIST">ARTIST</option>
+            <option value="VIP">VIP</option>
+            <option value="PRODUCER">PRODUCER</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+        </div>
+        
+        <div class="space-y-1">
+          <label class="text-[11px] font-bold uppercase text-primary">[ ACCESS KEY ]</label>
+          <input type="text" id="edit-user-key" required class="w-full bg-surface border border-subtle text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" />
+        </div>
+
+        <button type="submit" class="w-full bg-primary text-white text-xs font-bold py-3 mt-2 hover:bg-black transition-colors uppercase tracking-widest touch-target">
+          [ UPDATE USER ]
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-[10px] text-muted border-t border-subtle">
+    <span>© 2026 TMY ARCHIVE // MASTER ADMIN PANEL</span>
+    <span class="font-mono">SECURITY: HIGH</span>
+  </footer>
+
+  <script src="js/app.js?v=1787413131527"></script>
+</body>
+</html>

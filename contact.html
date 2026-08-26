@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tmy — CONTACT</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#F5F5F7',
+            card: '#FFFFFF',
+            primary: '#1D1D1F',
+            muted: '#86868B',
+            subtle: '#E8E8ED',
+            online: '#34C759',
+          },
+          fontFamily: {
+            mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-surface text-primary font-mono antialiased min-h-screen flex flex-col">
+
+  <!-- Global Header -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-subtle">
+    <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="index.html" class="font-bold text-lg text-primary tracking-tight">tmy</a>
+      <div class="hidden md:flex items-center gap-2 text-xs text-muted">
+        <span class="w-1.5 h-1.5 rounded-full bg-online pulse-green"></span>
+        <span>[ SYSTEM: ONLINE // VAULT: RESTRICTED ]</span>
+      </div>
+      <nav class="flex items-center gap-4 text-xs font-medium">
+        <a href="index.html" class="text-muted hover:text-primary transition-colors">[ ARCHIVE ]</a>
+        <a href="vault.html" class="text-muted hover:text-primary transition-colors">[ VAULT ]</a>
+        <a href="contact.html" class="text-primary hover:text-black hover:bg-black/5 px-2 py-1 rounded transition-colors">[ CONTACT ]</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-xl mx-auto px-4 py-16 flex flex-col justify-center">
+    
+    <div class="bg-card rounded-lg border border-subtle shadow-sm p-8 flex flex-col gap-8">
+      
+      <!-- Receipt Header -->
+      <div class="text-center border-b border-dashed border-subtle pb-6">
+        <h1 class="text-lg font-bold uppercase tracking-widest text-primary mb-2">TRANSMISSION FORM</h1>
+        <p class="text-xs text-muted uppercase">Connection: SECURE // ROUTING: DIRECT</p>
+      </div>
+
+      <!-- Form -->
+      <form class="flex flex-col gap-6" onsubmit="event.preventDefault(); alert('Transmission sent.');">
+        
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-bold text-primary uppercase">[ YOUR NAME / ALIAS ]</label>
+          <input type="text" required class="w-full bg-surface border border-subtle text-primary placeholder-muted text-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-mono" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-bold text-primary uppercase">[ INSTAGRAM / TELEGRAM HANDLE ]</label>
+          <input type="text" required class="w-full bg-surface border border-subtle text-primary placeholder-muted text-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-mono" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-bold text-primary uppercase">[ PROJECT TYPE ]</label>
+          <div class="relative">
+            <select required class="w-full bg-surface border border-subtle text-primary text-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-mono appearance-none cursor-pointer">
+              <option value="" disabled selected>-- SELECT --</option>
+              <option value="beat">Beat Inquiry</option>
+              <option value="custom">Custom Production</option>
+              <option value="mix">Mixing/Stem Request</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary">
+              <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-xs font-bold text-primary uppercase">[ MESSAGE ]</label>
+          <textarea required rows="4" class="w-full bg-surface border border-subtle text-primary placeholder-muted text-sm px-4 py-3 focus:outline-none focus:border-primary transition-colors font-mono resize-none"></textarea>
+        </div>
+
+        <div class="pt-4 border-t border-dashed border-subtle">
+          <button type="submit" class="w-full bg-primary text-white text-sm font-bold px-6 py-4 hover:bg-black transition-colors uppercase tracking-widest">
+            [ TRANSMIT MESSAGE ]
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+
+  </main>
+  
+  <script src="js/app.js?v=1787413131527"></script>
+</body>
+</html>

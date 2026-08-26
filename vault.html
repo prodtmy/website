@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tmy — VAULT</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#F5F5F7',
+            card: '#FFFFFF',
+            primary: '#1D1D1F',
+            muted: '#86868B',
+            subtle: '#E8E8ED',
+            darker: '#D2D2D7',
+            online: '#34C759',
+            'accent-red': '#FF3B30',
+          },
+          fontFamily: {
+            mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-surface text-primary font-mono antialiased min-h-screen flex flex-col justify-between select-none">
+
+  <!-- Global Top Header -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-subtle">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <a href="index.html" class="font-bold text-lg text-primary tracking-tight">tmy</a>
+      
+      
+      <!-- Navigation -->
+      <nav class="flex items-center gap-2 sm:gap-4 text-xs font-medium">
+        <a href="index.html" class="text-muted hover:text-primary px-2.5 py-1.5 transition-colors touch-target flex items-center">[ ARCHIVE ]</a>
+        <a href="vault.html" class="text-primary hover:text-black hover:bg-black/5 px-2.5 py-1.5 rounded transition-colors touch-target flex items-center">[ VAULT ]</a>
+        <a href="admin.html" id="vault-admin-link" class="hidden text-accent-red hover:bg-accent-red/10 px-2.5 py-1.5 rounded transition-colors touch-target flex items-center">[ ADMIN ]</a>
+        <a href="contact.html" id="vault-contact-link" class="text-muted hover:text-primary px-2.5 py-1.5 transition-colors touch-target flex items-center">[ CONTACT ]</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 w-full max-w-4xl mx-auto px-4 py-8 sm:py-12 flex flex-col justify-center gap-8" id="main-content">
+    
+    <!-- STATE A: UNAUTHORIZED (Terminal Gate) -->
+    <div id="unauthorized-state" class="w-full max-w-lg mx-auto flex flex-col gap-6 text-center sm:text-left">
+      <div class="flex items-center justify-center sm:justify-start gap-2">
+        <span class="text-xs font-bold text-muted uppercase tracking-widest">[ SYSTEM // AUTHORIZATION REQUIRED ]</span>
+      </div>
+      
+      <p class="text-xs sm:text-sm text-primary leading-relaxed">
+        RESTRICTED AREA. Enter an active authorization key to access unreleased loops, stems, and project files.
+      </p>
+      
+      <form id="vault-auth-form" class="flex flex-col gap-4 mt-2">
+        <input 
+          type="text" 
+          id="vault-key-input" 
+          placeholder="ENTER KEY (e.g. ADMIN2026, MARIUS, VIP2026)..." 
+          class="w-full bg-transparent border-b-2 border-primary text-primary placeholder-muted text-base sm:text-lg py-3 px-1 focus:outline-none transition-colors font-mono rounded-none tracking-widest uppercase"
+          autocomplete="off"
+          required
+        />
+        
+        <div class="flex flex-col sm:flex-row gap-3 mt-4">
+          <button type="submit" class="flex-1 text-xs font-bold bg-primary text-white px-6 py-3.5 hover:bg-black transition-colors uppercase tracking-widest touch-target">
+            [ VERIFY KEY ]
+          </button>
+          <a href="contact.html" class="flex-1 text-xs font-bold bg-transparent text-primary border border-primary px-6 py-3.5 hover:bg-black/5 transition-colors uppercase text-center flex items-center justify-center tracking-widest touch-target">
+            [ REQUEST PERMISSION ]
+          </a>
+        </div>
+      </form>
+
+      <!-- Testing Credentials Hint -->
+      <div class="mt-6 pt-4 border-t border-dashed border-subtle text-[11px] text-muted space-y-1">
+        <div class="font-bold uppercase tracking-wider text-primary">[ DEMO KEYS ]</div>
+        <div class="flex flex-wrap gap-2 pt-1 font-mono">
+          <span class="bg-card px-2 py-0.5 border border-subtle cursor-pointer hover:border-primary" onclick="document.getElementById('vault-key-input').value='ADMIN2026'">ADMIN: ADMIN2026</span>
+          <span class="bg-card px-2 py-0.5 border border-subtle cursor-pointer hover:border-primary" onclick="document.getElementById('vault-key-input').value='MARIUS'">RESTRICTED: MARIUS</span>
+          <span class="bg-card px-2 py-0.5 border border-subtle cursor-pointer hover:border-primary" onclick="document.getElementById('vault-key-input').value='VIP2026'">VIP: VIP2026</span>
+          <span class="bg-card px-2 py-0.5 border border-subtle cursor-pointer hover:border-primary" onclick="document.getElementById('vault-key-input').value='PROD2026'">PRODUCER: PROD2026</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATE B: AUTHORIZED (Exclusive Vault Dashboard) -->
+    <div id="authorized-state" class="hidden w-full flex-col gap-6">
+      
+      <!-- Top Action Bar & Tabs -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-4">
+        
+        <!-- Header Title -->
+        <h2 id="tracklist-header-title" class="text-sm font-bold uppercase tracking-widest text-primary">
+          PUBLIC VAULT // ALL STEMS
+        </h2>
+
+        <!-- Tabs Bar (Hidden completely if role is RESTRICTED) -->
+        <div id="vault-tabs-container" class="flex items-center gap-6">
+          <button id="tab-btn-public" class="text-xs font-bold text-primary border-b-2 border-primary pb-1 uppercase tracking-widest transition-colors touch-target">
+            [ PUBLIC VAULT ]
+          </button>
+          <button id="tab-btn-private" class="text-xs font-bold text-muted hover:text-primary pb-1 uppercase tracking-widest transition-colors touch-target">
+            [ PRIVATE VAULT ]
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Accordion Tracklist List Container (Generated dynamically) -->
+      <div id="vault-tracklist-container" class="flex flex-col divide-y divide-subtle">
+        <!-- Injected via app.js -->
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-[10px] text-muted border-t border-subtle">
+    <span>© 2026 TMY ARCHIVE // VAULT SECTOR</span>
+    <span class="font-mono">AUDIO ENGINE: ACTIVE</span>
+  </footer>
+
+  <script src="js/app.js?v=1787413131527"></script>
+</body>
+</html>

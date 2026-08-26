@@ -1,0 +1,148 @@
+@import "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap";
+/* [project]/css/styles.css [app-client] (css) */
+:root {
+  --bg-surface: #f5f5f7;
+  --bg-card: #fff;
+  --text-primary: #1d1d1f;
+  --text-muted: #86868b;
+  --border-subtle: #e8e8ed;
+  --border-darker: #d2d2d7;
+  --text-online: #34c759;
+  --accent-red: #ff3b30;
+  --accent-blue: #0071e3;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: Geist Mono, JetBrains Mono, monospace;
+}
+
+.label-bracket {
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 500;
+}
+
+.label-bracket:before {
+  content: "[ ";
+}
+
+.label-bracket:after {
+  content: " ]";
+}
+
+.pulse-green {
+  animation: 2s infinite pulse;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: .4;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: .4;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-fast {
+  animation: .75s linear infinite spin;
+}
+
+.waveform-placeholder {
+  background-color: var(--border-darker);
+  animation: 1.5s ease-in-out infinite alternate skeleton-loading;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    opacity: .25;
+  }
+
+  100% {
+    opacity: .75;
+  }
+}
+
+.accordion-content {
+  opacity: 0;
+  max-height: 0;
+  transition: max-height .35s cubic-bezier(.4, 0, .2, 1), opacity .25s, padding .3s;
+  overflow: hidden;
+}
+
+.accordion-content.open {
+  opacity: 1;
+  max-height: 500px;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.dropzone {
+  border: 2px dashed var(--border-darker);
+  transition: all .2s;
+}
+
+.dropzone.dragover {
+  border-color: var(--text-primary);
+  background-color: #1d1d1f0a;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-darker);
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+button, a, input, select, textarea {
+  transition: background-color .15s, color .15s, border-color .15s, opacity .15s;
+}
+
+.waveform-canvas {
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/*# sourceMappingURL=css_styles_01l-ec2.css.map*/

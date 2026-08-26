@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-surface: #F5F5F7;
+  --bg-card: #FFFFFF;
+  --text-primary: #1D1D1F;
+  --text-muted: #86868B;
+  --border-subtle: #E8E8ED;
+  --border-darker: #D2D2D7;
+  --text-online: #34C759;
+  --accent-red: #FF3B30;
+  --accent-blue: #0071E3;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Typography Rules */
+.label-bracket {
+  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.label-bracket::before {
+  content: "[ ";
+}
+
+.label-bracket::after {
+  content: " ]";
+}
+
+/* Animations & UI Effects */
+.pulse-green {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-fast {
+  animation: spin 0.75s linear infinite;
+}
+
+/* Skeleton Loading Animation */
+.waveform-placeholder {
+  animation: skeleton-loading 1.5s infinite alternate ease-in-out;
+  background-color: var(--border-darker);
+}
+
+@keyframes skeleton-loading {
+  0% { opacity: 0.25; }
+  100% { opacity: 0.75; }
+}
+
+/* Smooth Accordion */
+.accordion-content {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, padding 0.3s ease;
+}
+
+.accordion-content.open {
+  max-height: 500px;
+  opacity: 1;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* Drag & Drop Zone */
+.dropzone {
+  border: 2px dashed var(--border-darker);
+  transition: all 0.2s ease;
+}
+
+.dropzone.dragover {
+  border-color: var(--text-primary);
+  background-color: rgba(29, 29, 31, 0.04);
+}
+
+/* Minimal Custom Scrollbar for Tables & Lists */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-darker);
+  border-radius: 2px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Touch targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Smooth Interactive Elements */
+button, a, input, select, textarea {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+/* Waveform Canvas visualizer */
+.waveform-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: pointer;
+}

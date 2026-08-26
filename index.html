@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>tmy — AUDIO ARCHIVE</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#F5F5F7',
+            card: '#FFFFFF',
+            primary: '#1D1D1F',
+            muted: '#86868B',
+            subtle: '#E8E8ED',
+            darker: '#D2D2D7',
+            online: '#34C759',
+          },
+          fontFamily: {
+            mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="bg-surface text-primary font-mono antialiased min-h-screen flex flex-col justify-between select-none">
+
+  <!-- A. Global Header (Top Bar) -->
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-subtle">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="index.html" class="font-bold text-lg text-primary tracking-tight">tmy</a>
+      
+      
+      <!-- Navigation -->
+      <nav class="flex items-center gap-2 sm:gap-4 text-xs font-medium">
+        <a href="index.html" class="text-primary hover:text-black hover:bg-black/5 px-2.5 py-1.5 rounded transition-colors touch-target flex items-center">[ ARCHIVE ]</a>
+        <a href="vault.html" class="text-muted hover:text-primary px-2.5 py-1.5 transition-colors touch-target flex items-center">[ VAULT ]</a>
+        <a href="contact.html" class="text-muted hover:text-primary px-2.5 py-1.5 transition-colors touch-target flex items-center">[ CONTACT ]</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Player Section -->
+  <main class="flex-1 w-full max-w-2xl mx-auto px-4 py-8 sm:py-12 flex flex-col justify-center gap-8">
+    
+    <!-- Hero / Title -->
+    <section class="text-center space-y-2">
+      <h1 class="text-lg sm:text-xl md:text-2xl font-bold tracking-wider text-primary uppercase">
+        TMY — AUDIO ARCHIVE // VOL. 01
+      </h1>
+      <p class="text-xs sm:text-sm text-muted">
+        Selected public previews. Full stems and unreleased loops available in the Vault.
+      </p>
+    </section>
+
+    <!-- Centered Single Audio Player Card -->
+    <section class="w-full">
+      <div class="bg-card rounded-lg border border-subtle shadow-sm p-6 sm:p-8 flex flex-col gap-6 w-full">
+        
+        <!-- Track Info Header -->
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex flex-col min-w-0">
+            <span id="player-title" class="font-bold text-base sm:text-lg text-primary tracking-wide truncate">LOADING...</span>
+            <span id="player-specs" class="text-xs text-muted mt-0.5">-- BPM // --</span>
+          </div>
+          <button id="copy-btn" class="text-[10px] sm:text-xs text-primary bg-transparent hover:bg-surface border border-subtle px-3 py-2 flex items-center justify-center rounded transition-colors whitespace-nowrap touch-target">
+            [ COPY INFO ]
+          </button>
+        </div>
+
+        <!-- Waveform Visualizer Area -->
+        <div class="w-full h-16 sm:h-20 relative bg-surface/50 rounded overflow-hidden" id="single-waveform">
+          <div class="absolute inset-0 waveform-placeholder rounded" id="waveform-skeleton"></div>
+        </div>
+
+        <!-- Controls Bar -->
+        <div class="pt-4 border-t border-subtle flex items-center justify-between">
+          <button id="btn-prev" class="text-xs text-muted hover:text-primary transition-colors uppercase font-bold px-3 sm:px-4 py-2 hover:bg-black/5 rounded touch-target flex items-center justify-center">
+            [ PREV ]
+          </button>
+          
+          <button id="btn-play" class="w-12 h-12 flex items-center justify-center text-primary bg-surface hover:bg-subtle rounded-full transition-all border border-subtle touch-target shadow-xs" data-track-play-btn="p1">
+            <svg class="w-5 h-5 play-icon ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="w-5 h-5 pause-icon hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+
+          <button id="btn-next" class="text-xs text-muted hover:text-primary transition-colors uppercase font-bold px-3 sm:px-4 py-2 hover:bg-black/5 rounded touch-target flex items-center justify-center">
+            [ NEXT ]
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-[10px] text-muted border-t border-subtle">
+    <span>© 2026 TMY ARCHIVE // ALL RIGHTS RESERVED</span>
+    <a href="vault.html" class="hover:text-primary transition-colors">[ ENTER VAULT ↵ ]</a>
+  </footer>
+
+  <script src="js/app.js?v=1787413131527"></script>
+</body>
+</html>
