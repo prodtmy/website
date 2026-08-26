@@ -392,18 +392,34 @@ export default function AdminPage() {
               </div>
 
               <form onSubmit={handleUploadSubmit} className="bg-white p-6 rounded-lg border border-[#E8E8ED] space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ PREVIEW MP3 FILE ]</label>
-                    <input type="file" accept=".mp3" required onChange={(e) => setMp3File(e.target.files?.[0] || null)} className="w-full text-xs" />
+                    <input
+                      type="file"
+                      accept="audio/mpeg,audio/mp3,.mp3"
+                      required
+                      onChange={(e) => setMp3File(e.target.files?.[0] || null)}
+                      className="w-full text-xs"
+                    />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ MASTER WAV FILE ]</label>
-                    <input type="file" accept=".wav" onChange={(e) => setWavFile(e.target.files?.[0] || null)} className="w-full text-xs" />
+                    <input
+                      type="file"
+                      accept="audio/wav,audio/x-wav,.wav"
+                      onChange={(e) => setWavFile(e.target.files?.[0] || null)}
+                      className="w-full text-xs"
+                    />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ FL STUDIO FLP FILE ]</label>
-                    <input type="file" accept=".flp" onChange={(e) => setFlpFile(e.target.files?.[0] || null)} className="w-full text-xs" />
+                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ STEMS / FLP ARCHIVE ]</label>
+                    <input
+                      type="file"
+                      accept=".flp,.zip,.rar"
+                      onChange={(e) => setFlpFile(e.target.files?.[0] || null)}
+                      className="w-full text-xs"
+                    />
                   </div>
                 </div>
 
