@@ -143,7 +143,7 @@ export default function AdminPage() {
       if (flpFile) formData.append('flp_file', flpFile);
 
       setUploadProgress(40);
-      const res = await fetch('/app/api/upload-beat' || '/api/upload-beat', {
+      const res = await fetch('/api/upload-beat', {
         method: 'POST',
         body: formData,
       });
@@ -154,7 +154,7 @@ export default function AdminPage() {
 
       setUploadProgress(100);
       alert('Asset uploaded successfully!');
-      
+
       // Reset form
       setUploadTitle('');
       setMp3File(null);
@@ -255,23 +255,23 @@ export default function AdminPage() {
           <div className="flex items-center justify-center sm:justify-start gap-2">
             <span className="text-xs font-bold text-[#86868B] uppercase tracking-widest">[ SYSTEM // ADMIN PORTAL ACCESS REQUIRED ]</span>
           </div>
-          
+
           <p className="text-xs sm:text-sm text-[#1D1D1F] leading-relaxed">
             RESTRICTED ADMIN PANEL. Enter an authorized master governance key to control vault media, users, and telemetry.
           </p>
-          
+
           <form onSubmit={handleLogin} className="flex flex-col gap-4 mt-2">
-            <input 
+            <input
               name="adminKey"
-              type="text" 
+              type="text"
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="ENTER MASTER KEY (e.g. ADMIN2026)..." 
+              placeholder="ENTER MASTER KEY (e.g. ADMIN2026)..."
               className="w-full bg-transparent border-b-2 border-[#1D1D1F] text-[#1D1D1F] placeholder-[#86868B] text-base sm:text-lg py-3 px-1 focus:outline-none transition-colors font-mono rounded-none tracking-widest uppercase"
               autoComplete="off"
               required
             />
-            
+
             <div className="flex gap-3 mt-4">
               <button type="submit" className="flex-1 text-xs font-bold bg-[#1D1D1F] text-white px-6 py-3.5 hover:bg-black transition-colors uppercase tracking-widest">
                 [ AUTHENTICATE MASTER KEY ]
@@ -293,7 +293,7 @@ export default function AdminPage() {
             <Link href="/" className="font-bold text-lg text-[#1D1D1F] tracking-tight">tmy</Link>
             <span className="text-xs text-[#86868B] font-bold">// MASTER CONTROL</span>
           </div>
-          
+
           <div className="flex items-center gap-4 text-xs">
             <span className="text-[#1D1D1F] font-bold hidden sm:inline">ADMIN: {clientName} [ACTIVE]</span>
             <button onClick={handleLogout} className="text-[#86868B] hover:text-[#1D1D1F] transition-colors">[ LOGOUT ]</button>
@@ -305,28 +305,28 @@ export default function AdminPage() {
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
         {/* Sidebar */}
         <aside className="w-full md:w-56 flex-shrink-0 flex flex-row md:flex-col gap-2 border-b md:border-b-0 md:border-r border-[#E8E8ED] pb-4 md:pb-0 md:pr-6 overflow-x-auto">
-          <button 
+          <button
             onClick={() => setActiveTab('vault')}
             className={`flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'vault' ? 'bg-[#1D1D1F] text-white' : 'text-[#86868B] hover:text-[#1D1D1F] hover:bg-black/5'}`}
           >
             <span>🎛️</span>
             <span>[ VAULT MANAGER ]</span>
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('upload')}
             className={`flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'upload' ? 'bg-[#1D1D1F] text-white' : 'text-[#86868B] hover:text-[#1D1D1F] hover:bg-black/5'}`}
           >
             <span>📁</span>
             <span>[ ASSET UPLOAD ]</span>
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('users')}
             className={`flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'users' ? 'bg-[#1D1D1F] text-white' : 'text-[#86868B] hover:text-[#1D1D1F] hover:bg-black/5'}`}
           >
             <span>👥</span>
             <span>[ USERS ]</span>
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('analytics')}
             className={`flex-1 md:flex-initial text-left px-3 py-2.5 text-xs font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'analytics' ? 'bg-[#1D1D1F] text-white' : 'text-[#86868B] hover:text-[#1D1D1F] hover:bg-black/5'}`}
           >
@@ -337,7 +337,7 @@ export default function AdminPage() {
 
         {/* Workspace */}
         <section className="flex-1 min-w-0">
-          
+
           {/* TAB 1: VAULT MANAGER */}
           {activeTab === 'vault' && (
             <div className="space-y-6">
@@ -348,8 +348,8 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-[#86868B] uppercase font-bold">FILTER:</span>
-                  <select 
-                    value={filter} 
+                  <select
+                    value={filter}
                     onChange={(e: any) => setFilter(e.target.value)}
                     className="bg-white border border-[#E8E8ED] text-xs px-2.5 py-1.5 focus:outline-none focus:border-primary font-mono rounded"
                   >
@@ -370,7 +370,7 @@ export default function AdminPage() {
                         <div className="text-[10px] text-[#86868B] uppercase mt-0.5">{track.bpm} BPM // {track.key} // TIER: {track.access_tier}</div>
                       </div>
                       <div className="flex gap-2">
-                        <button 
+                        <button
                           onClick={() => handleDeleteTrack(track.id)}
                           className="text-[10px] bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1.5 uppercase font-bold transition-colors"
                         >
@@ -500,7 +500,7 @@ export default function AdminPage() {
               {/* Create User Form */}
               <form onSubmit={handleCreateUserSubmit} className="bg-white p-6 rounded-lg border border-[#E8E8ED] space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#1D1D1F]">[ CREATE NEW USER KEY ]</h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ CLIENT NAME ]</label>
