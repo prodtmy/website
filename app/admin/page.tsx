@@ -134,36 +134,71 @@ export default function AdminPage() {
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mp3File) {
-      alert('Please select at least a public preview MP3 file.');
+      alert('Bitte mindestens eine MP3-Vorschau auswählen.');
       return;
     }
 
     setUploadProgress(10);
     try {
-      const formData = new FormData();
-      formData.append('title', uploadTitle);
-      formData.append('bpm', uploadBpm);
-      formData.append('key', uploadKey);
-      formData.append('isVaultOnly', uploadIsVaultOnly.toString());
-      formData.append('accessTier', uploadAccessTier);
-      formData.append('mp3_file', mp3File);
-      if (wavFile) formData.append('wav_file', wavFile);
-      if (flpFile) formData.append('flp_file', flpFile);
+      const timeStamp = Date.now();
+      const cleanFileName = (name: string) => name.replace(/[^a-zA-Z0-9.-]/g, '_');
 
+      // 1. MP3 direkt zu Supabase Storage hochladen
+      const mp3Path = `previews/${timeStamp}_${cleanFileName(mp3File.name)}`;
+      const { error: mp3Err } = await supabase.storage
+        .from('tracks') // Ersetze 'tracks' durch deinen tatsächlichen Supabase Bucket-Namen
+        .upload(mp3Path, mp3File, { cacheControl: '3600', upsert: false });
+
+      if (mp3Err) throw new Error(`MP3 Upload fehlgeschlagen: ${mp3Err.message}`);
       setUploadProgress(40);
-      const res = await fetch('/api/upload-beat', {
-        method: 'POST',
-        body: formData,
-      });
 
-      setUploadProgress(80);
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Upload failed');
+      // 2. Optional WAV hochladen
+      let wavPath = null;
+      if (wavFile) {
+        wavPath = `masters/${timeStamp}_${cleanFileName(wavFile.name)}`;
+        const { error: wavErr } = await supabase.storage
+          .from('tracks')
+          .upload(wavPath, wavFile, { cacheControl: '3600', upsert: false });
+        if (wavErr) throw new Error(`WAV Upload fehlgeschlagen: ${wavErr.message}`);
+      }
+      setUploadProgress(70);
+
+      // 3. Optional FLP/ZIP hochladen
+      let flpPath = null;
+      if (flpFile) {
+        flpPath = `stems/${timeStamp}_${cleanFileName(flpFile.name)}`;
+        const { error: flpErr } = await supabase.storage
+          .from('tracks')
+          .upload(flpPath, flpFile, { cacheControl: '3600', upsert: false });
+        if (flpErr) throw new Error(`FLP/ZIP Upload fehlgeschlagen: ${flpErr.message}`);
+      }
+      setUploadProgress(90);
+
+      // 4. Öffentliche URLs generieren (oder relative Speicher-Pfade)
+      const { data: mp3UrlData } = supabase.storage.from('tracks').getPublicUrl(mp3Path);
+      const { data: wavUrlData } = wavPath ? supabase.storage.from('tracks').getPublicUrl(wavPath) : { data: { publicUrl: null } };
+      const { data: flpUrlData } = flpPath ? supabase.storage.from('tracks').getPublicUrl(flpPath) : { data: { publicUrl: null } };
+
+      // 5. Nur noch Metadaten in die Supabase Datenbank eintragen
+      const { error: dbError } = await supabase.from('tracks').insert([
+        {
+          title: uploadTitle,
+          bpm: parseInt(uploadBpm, 10),
+          key: uploadKey,
+          is_vault_only: uploadIsVaultOnly,
+          access_tier: uploadAccessTier,
+          mp3_url: mp3UrlData.publicUrl,
+          wav_url: wavUrlData?.publicUrl || null,
+          flp_url: flpUrlData?.publicUrl || null,
+        },
+      ]);
+
+      if (dbError) throw new Error(`Datenbank-Eintrag fehlgeschlagen: ${dbError.message}`);
 
       setUploadProgress(100);
-      alert('Asset uploaded successfully!');
+      alert('Asset erfolgreich hochgeladen!');
 
-      // Reset form & inputs
+      // Reset Formular
       setUploadTitle('');
       setUploadBpm('140');
       setUploadKey('F# MIN');
@@ -172,16 +207,15 @@ export default function AdminPage() {
       setMp3File(null);
       setWavFile(null);
       setFlpFile(null);
-      setFileInputKey(Date.now()); // Reset file input fields visually
+      setFileInputKey(Date.now());
       setUploadProgress(null);
       fetchData();
     } catch (err: any) {
       console.error(err);
-      alert(`Upload error: ${err.message}`);
+      alert(`Upload Fehler: ${err.message}`);
       setUploadProgress(null);
     }
   };
-
   // Toggle Track Visibility (Vault Only vs Public)
   const handleToggleTrackVisibility = async (id: string, currentStatus: boolean) => {
     try {
