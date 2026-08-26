@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 
@@ -23,12 +23,10 @@ export default function AdminPage() {
   const [uploadKey, setUploadKey] = useState('F# MIN');
   const [uploadAccessTier, setUploadAccessTier] = useState('standard');
   const [uploadIsVaultOnly, setUploadIsVaultOnly] = useState(false);
+  const [uploadAssignedUser, setUploadAssignedUser] = useState('');
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [wavFile, setWavFile] = useState<File | null>(null);
   const [flpFile, setFlpFile] = useState<File | null>(null);
-
-  // Key to force resetting HTML file inputs
-  const [fileInputKey, setFileInputKey] = useState(Date.now());
 
   // Tab 3: Users State
   const [users, setUsers] = useState<any[]>([]);
@@ -76,10 +74,7 @@ export default function AdminPage() {
   const fetchData = async () => {
     // Fetch Tracks
     try {
-      const { data: tracksData } = await supabase
-        .from('tracks')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: tracksData } = await supabase.from('tracks').select('*').order('created_at', { ascending: false });
       if (tracksData) setTracks(tracksData);
     } catch (e) {
       console.error(e);
@@ -87,10 +82,7 @@ export default function AdminPage() {
 
     // Fetch Access Keys / Users
     try {
-      const { data: keysData } = await supabase
-        .from('access_keys')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: keysData } = await supabase.from('access_keys').select('*').order('created_at', { ascending: false });
       if (keysData) setUsers(keysData);
     } catch (e) {
       console.error(e);
@@ -111,9 +103,9 @@ export default function AdminPage() {
         return;
       }
 
-      // Save admin cookie securely
+      // Save admin cookie
       if (typeof document !== 'undefined') {
-        document.cookie = `vault_token=${keyInput}; path=/; max-age=604800; SameSite=Lax; Secure`;
+        document.cookie = `vault_token=${keyInput}; path=/; max-age=604800`;
       }
       setIsAuthorized(true);
       setClientName(data.client_name);
@@ -163,36 +155,17 @@ export default function AdminPage() {
       setUploadProgress(100);
       alert('Asset uploaded successfully!');
 
-      // Reset form & inputs
+      // Reset form
       setUploadTitle('');
-      setUploadBpm('140');
-      setUploadKey('F# MIN');
-      setUploadAccessTier('standard');
-      setUploadIsVaultOnly(false);
       setMp3File(null);
       setWavFile(null);
       setFlpFile(null);
-      setFileInputKey(Date.now()); // Reset file input fields visually
       setUploadProgress(null);
       fetchData();
     } catch (err: any) {
       console.error(err);
       alert(`Upload error: ${err.message}`);
       setUploadProgress(null);
-    }
-  };
-
-  // Toggle Track Visibility (Vault Only vs Public)
-  const handleToggleTrackVisibility = async (id: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('tracks')
-        .update({ is_vault_only: !currentStatus })
-        .eq('id', id);
-      if (error) throw error;
-      fetchData();
-    } catch (err: any) {
-      alert(`Error toggling visibility: ${err.message}`);
     }
   };
 
@@ -393,21 +366,10 @@ export default function AdminPage() {
                   .map((track) => (
                     <div key={track.id} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
-                        <div className="font-bold text-xs uppercase text-[#1D1D1F] flex items-center gap-2">
-                          <span>{track.title}</span>
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${track.is_vault_only ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
-                            {track.is_vault_only ? 'VAULT ONLY' : 'PUBLIC'}
-                          </span>
-                        </div>
-                        <div className="text-[10px] text-[#86868B] uppercase mt-1">{track.bpm} BPM // {track.key} // TIER: {track.access_tier}</div>
+                        <div className="font-bold text-xs uppercase text-[#1D1D1F]">{track.title}</div>
+                        <div className="text-[10px] text-[#86868B] uppercase mt-0.5">{track.bpm} BPM // {track.key} // TIER: {track.access_tier}</div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleToggleTrackVisibility(track.id, track.is_vault_only)}
-                          className="text-[10px] bg-[#F5F5F7] hover:bg-[#E8E8ED] border border-[#E8E8ED] px-2.5 py-1.5 uppercase font-bold transition-colors"
-                        >
-                          [ TOGGLE: {track.is_vault_only ? 'MAKE PUBLIC' : 'MAKE VAULT ONLY'} ]
-                        </button>
+                      <div className="flex gap-2">
                         <button
                           onClick={() => handleDeleteTrack(track.id)}
                           className="text-[10px] bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3 py-1.5 uppercase font-bold transition-colors"
@@ -430,7 +392,7 @@ export default function AdminPage() {
               </div>
 
               <form onSubmit={handleUploadSubmit} className="bg-white p-6 rounded-lg border border-[#E8E8ED] space-y-4">
-                <div key={fileInputKey} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ PREVIEW MP3 FILE ]</label>
                     <input
@@ -587,7 +549,7 @@ export default function AdminPage() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-sm font-bold uppercase tracking-widest text-[#1D1D1F]">[ ANALYTICS // TELEMETRY & LOGS ]</h2>
-                <p className="text-xs text-[#86868B] mt-1">Real-time stats on stems downloaded, active sessions, and n8n webhook dispatches.</p>
+                <p className="text-xs text-muted mt-1">Real-time stats on stems downloaded, active sessions, and n8n webhook dispatches.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-white p-5 rounded-lg border border-[#E8E8ED]">
