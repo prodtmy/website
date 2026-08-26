@@ -4,8 +4,11 @@ import { createClient } from '@/utils/supabase/server'
 export async function POST(request: Request) {
     try {
         const supabase = await createClient()
+
+        // 1. Das leichte JSON vom Frontend parsen
         const body = await request.json()
 
+        // 2. Variablen aus dem Body extrahieren
         const {
             title,
             bpm,
@@ -17,6 +20,7 @@ export async function POST(request: Request) {
             flpPath,
         } = body
 
+        // 3. Sicherheitscheck: Sind die wichtigsten Daten da?
         if (!title || !mp3Url) {
             return NextResponse.json(
                 { error: 'Missing required fields (title, mp3Url)' },
@@ -24,7 +28,7 @@ export async function POST(request: Request) {
             )
         }
 
-        // Insert record into database
+        // 4. In die Datenbank eintragen (nur noch die Text-URLs, keine echten Dateien mehr)
         const { data: track, error: dbError } = await supabase
             .from('tracks')
             .insert([

@@ -131,74 +131,82 @@ export default function AdminPage() {
   };
 
   // Asset Upload
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mp3File) {
-      alert('Bitte mindestens eine MP3-Vorschau auswählen.');
+      alert('Bitte mindestens eine MP3-Datei auswählen.');
       return;
     }
 
     setUploadProgress(10);
     try {
-      const timeStamp = Date.now();
-      const cleanFileName = (name: string) => name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const timestamp = Date.now();
+      const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-      // 1. MP3 direkt zu Supabase Storage hochladen
-      const mp3Path = `previews/${timeStamp}_${cleanFileName(mp3File.name)}`;
+      // 1. MP3 direkt in Supabase Storage hochladen (übergeht das Vercel-Limit)
+      const mp3Path = `mp3/${timestamp}_${sanitize(mp3File.name)}`;
       const { error: mp3Err } = await supabase.storage
-        .from('tracks') // Ersetze 'tracks' durch deinen tatsächlichen Supabase Bucket-Namen
-        .upload(mp3Path, mp3File, { cacheControl: '3600', upsert: false });
+        .from('tracks') // Supabase Bucket-Name
+        .upload(mp3Path, mp3File);
 
       if (mp3Err) throw new Error(`MP3 Upload fehlgeschlagen: ${mp3Err.message}`);
       setUploadProgress(40);
 
-      // 2. Optional WAV hochladen
+      // 2. Optional: Master-WAV direkt hochladen
       let wavPath = null;
       if (wavFile) {
-        wavPath = `masters/${timeStamp}_${cleanFileName(wavFile.name)}`;
+        wavPath = `wav/${timestamp}_${sanitize(wavFile.name)}`;
         const { error: wavErr } = await supabase.storage
           .from('tracks')
-          .upload(wavPath, wavFile, { cacheControl: '3600', upsert: false });
+          .upload(wavPath, wavFile);
         if (wavErr) throw new Error(`WAV Upload fehlgeschlagen: ${wavErr.message}`);
       }
       setUploadProgress(70);
 
-      // 3. Optional FLP/ZIP hochladen
+      // 3. Optional: Stems / FLP direkt hochladen
       let flpPath = null;
       if (flpFile) {
-        flpPath = `stems/${timeStamp}_${cleanFileName(flpFile.name)}`;
+        flpPath = `stems/${timestamp}_${sanitize(flpFile.name)}`;
         const { error: flpErr } = await supabase.storage
           .from('tracks')
-          .upload(flpPath, flpFile, { cacheControl: '3600', upsert: false });
-        if (flpErr) throw new Error(`FLP/ZIP Upload fehlgeschlagen: ${flpErr.message}`);
+          .upload(flpPath, flpFile);
+        if (flpErr) throw new Error(`FLP Upload fehlgeschlagen: ${flpErr.message}`);
       }
       setUploadProgress(90);
 
-      // 4. Öffentliche URLs generieren (oder relative Speicher-Pfade)
+      // 4. Öffentliche URLs aus Supabase abrufen
       const { data: mp3UrlData } = supabase.storage.from('tracks').getPublicUrl(mp3Path);
-      const { data: wavUrlData } = wavPath ? supabase.storage.from('tracks').getPublicUrl(wavPath) : { data: { publicUrl: null } };
-      const { data: flpUrlData } = flpPath ? supabase.storage.from('tracks').getPublicUrl(flpPath) : { data: { publicUrl: null } };
+      const { data: wavUrlData } = wavPath
+        ? supabase.storage.from('tracks').getPublicUrl(wavPath)
+        : { data: { publicUrl: null } };
+      const { data: flpUrlData } = flpPath
+        ? supabase.storage.from('tracks').getPublicUrl(flpPath)
+        : { data: { publicUrl: null } };
 
-      // 5. Nur noch Metadaten in die Supabase Datenbank eintragen
-      const { error: dbError } = await supabase.from('tracks').insert([
-        {
+      // 5. Nur noch leichtes JSON (wenige Bytes) an den API-Endpunkt senden
+      const res = await fetch('/api/upload-beat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           title: uploadTitle,
-          bpm: parseInt(uploadBpm, 10),
+          bpm: uploadBpm,
           key: uploadKey,
-          is_vault_only: uploadIsVaultOnly,
-          access_tier: uploadAccessTier,
+          isVaultOnly: uploadIsVaultOnly,
+          accessTier: uploadAccessTier,
           mp3_url: mp3UrlData.publicUrl,
           wav_url: wavUrlData?.publicUrl || null,
           flp_url: flpUrlData?.publicUrl || null,
-        },
-      ]);
+        }),
+      });
 
-      if (dbError) throw new Error(`Datenbank-Eintrag fehlgeschlagen: ${dbError.message}`);
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Speichern fehlgeschlagen');
 
       setUploadProgress(100);
       alert('Asset erfolgreich hochgeladen!');
 
-      // Reset Formular
+      // Formular zurücksetzen
       setUploadTitle('');
       setUploadBpm('140');
       setUploadKey('F# MIN');
@@ -216,6 +224,7 @@ export default function AdminPage() {
       setUploadProgress(null);
     }
   };
+
   // Toggle Track Visibility (Vault Only vs Public)
   const handleToggleTrackVisibility = async (id: string, currentStatus: boolean) => {
     try {
