@@ -185,18 +185,19 @@ export default function AdminPage() {
         : { data: { publicUrl: null } };
 
       // 5. Nur noch leichtes JSON (wenige Bytes) an den API-Endpunkt senden
+      // in deiner page.tsx
       const res = await fetch('/api/upload-beat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: uploadTitle,
+          title: uploadTitle,               // Muss gefüllt sein!
           bpm: uploadBpm,
           key: uploadKey,
           isVaultOnly: uploadIsVaultOnly,
           accessTier: uploadAccessTier,
-          mp3_url: mp3UrlData.publicUrl,
-          wav_url: wavUrlData?.publicUrl || null,
-          flp_url: flpUrlData?.publicUrl || null,
+          mp3Url: mp3UrlData.publicUrl,     // WICHTIG: mp3Url (nicht mp3_url)
+          wavPath: wavUrlData?.publicUrl || null,
+          flpPath: flpUrlData?.publicUrl || null,
         }),
       });
 
