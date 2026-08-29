@@ -147,7 +147,7 @@ export default function AdminPage() {
       // 1. MP3 direkt in Supabase Storage hochladen (übergeht das Vercel-Limit)
       const mp3Path = `mp3/${timestamp}_${sanitize(mp3File.name)}`;
       const { error: mp3Err } = await supabase.storage
-        .from('tracks') // Supabase Bucket-Name
+        .from('previews') // Öffentlicher Bucket für Previews
         .upload(mp3Path, mp3File);
 
       if (mp3Err) throw new Error(`MP3 Upload fehlgeschlagen: ${mp3Err.message}`);
@@ -158,7 +158,7 @@ export default function AdminPage() {
       if (wavFile) {
         wavPath = `wav/${timestamp}_${sanitize(wavFile.name)}`;
         const { error: wavErr } = await supabase.storage
-          .from('tracks')
+          .from('private') // Privater Bucket für WAV Master
           .upload(wavPath, wavFile);
         if (wavErr) throw new Error(`WAV Upload fehlgeschlagen: ${wavErr.message}`);
       }
@@ -169,19 +169,19 @@ export default function AdminPage() {
       if (flpFile) {
         flpPath = `stems/${timestamp}_${sanitize(flpFile.name)}`;
         const { error: flpErr } = await supabase.storage
-          .from('tracks')
+          .from('private') // Privater Bucket für WAV/FLP Stems
           .upload(flpPath, flpFile);
         if (flpErr) throw new Error(`FLP Upload fehlgeschlagen: ${flpErr.message}`);
       }
       setUploadProgress(90);
 
-      // 4. Öffentliche URLs aus Supabase abrufen
-      const { data: mp3UrlData } = supabase.storage.from('tracks').getPublicUrl(mp3Path);
+      // 4. URLs aus Supabase abrufen
+      const { data: mp3UrlData } = supabase.storage.from('previews').getPublicUrl(mp3Path);
       const { data: wavUrlData } = wavPath
-        ? supabase.storage.from('tracks').getPublicUrl(wavPath)
+        ? supabase.storage.from('private').getPublicUrl(wavPath)
         : { data: { publicUrl: null } };
       const { data: flpUrlData } = flpPath
-        ? supabase.storage.from('tracks').getPublicUrl(flpPath)
+        ? supabase.storage.from('private').getPublicUrl(flpPath)
         : { data: { publicUrl: null } };
 
       // 5. Nur noch leichtes JSON (wenige Bytes) an den API-Endpunkt senden
