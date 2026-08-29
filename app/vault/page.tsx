@@ -3,10 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import AudioPlayer from '@/components/AudioPlayer';
-import CollabModal from '@/components/CollabModal';
 import { createClient } from '@/utils/supabase/client';
-
 import { Suspense } from 'react';
 
 function VaultPageContent() {
@@ -16,12 +13,49 @@ function VaultPageContent() {
 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [tracks, setTracks] = useState<any[]>([]);
   const [clientName, setClientName] = useState('GUEST');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedTrack, setSelectedTrack] = useState('');
-  const [keyInput, setKeyInput] = useState('');
   const [accessTier, setAccessTier] = useState('');
+  const [keyInput, setKeyInput] = useState('');
+
+  // Tabs: 'public' | 'private'
+  const [activeTab, setActiveTab] = useState<'public' | 'private'>('public');
+  const [tracks, setTracks] = useState<any[]>([]);
+
+  // Accordion open states
+  const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({});
+
+  // Audio Playback
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [audioObj, setAudioObj] = useState<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio();
+    audio.onended = () => setPlayingTrackId(null);
+    audio.onpause = () => setPlayingTrackId(null);
+    setAudioObj(audio);
+
+    return () => {
+      audio.pause();
+      audio.src = '';
+    };
+  }, []);
+
+  const togglePlay = (trackId: string, src: string) => {
+    if (!audioObj) return;
+
+    if (playingTrackId === trackId) {
+      audioObj.pause();
+      setPlayingTrackId(null);
+    } else {
+      audioObj.src = src;
+      audioObj.play().then(() => {
+        setPlayingTrackId(trackId);
+      }).catch(err => {
+        console.error("Play error:", err);
+        alert("Audio konnte nicht abgespielt werden.");
+      });
+    }
+  };
 
   const handleLogout = () => {
     if (typeof document !== 'undefined') {
@@ -42,7 +76,6 @@ function VaultPageContent() {
       }
 
       try {
-        // Query Supabase for the access key
         const { data: keyData, error: keyError } = await supabase
           .from('access_keys')
           .select('client_name, is_active, access_tier')
@@ -56,12 +89,11 @@ function VaultPageContent() {
           return;
         }
 
-        // Save to cookie for subsequent visits
         if (typeof document !== 'undefined') {
-          document.cookie = `vault_token=${token}; path=/; max-age=604800`; // 7 days
+          document.cookie = `vault_token=${token}; path=/; max-age=604800; SameSite=Lax; Secure`;
         }
 
-        const tier = keyData.access_tier || '';
+        const tier = keyData.access_tier?.toLowerCase() || '';
         if (tier === 'admin' || tier === 'producer') {
           window.location.href = '/admin';
           return;
@@ -71,7 +103,14 @@ function VaultPageContent() {
         setClientName(keyData.client_name);
         setAccessTier(tier);
 
-        fetchTracks(tier);
+        // If artist, default to private tab
+        if (tier === 'artist') {
+          setActiveTab('private');
+        } else {
+          setActiveTab('public');
+        }
+
+        fetchTracks();
       } catch (err) {
         console.error(err);
         setIsAuthorized(false);
@@ -82,52 +121,31 @@ function VaultPageContent() {
     verifyAccess();
   }, [keyParam]);
 
-  const fetchTracks = async (accessTier: string) => {
+  const fetchTracks = async () => {
     try {
-      // Query exclusive tracks from Supabase
       const { data: tracksData, error: tracksError } = await supabase
         .from('tracks')
         .select('*')
-        .eq('is_vault_only', true)
-        // Optionally filter by access_tier if required
         .order('created_at', { ascending: false });
 
       if (tracksError) throw tracksError;
-
-      // Map to the expected format
-      const formattedTracks = tracksData.map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        bpm: t.bpm,
-        key: t.key,
-        date: new Date(t.created_at).toISOString().split('T')[0],
-        src: t.mp3_url,
-      }));
-
-      setTracks(formattedTracks);
-      setLoading(false);
+      setTracks(tracksData || []);
     } catch (err) {
       console.error(err);
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleDownload = async (type: string, trackTitle: string) => {
-    // Trigger download logic here
-    alert(`Downloading ${type} for ${trackTitle}`);
-    
-    // Async webhook call in background
-    try {
-      // await fetch('https://n8n.yourdomain.com/webhook/track-download', { ... })
-      console.log(`[WEBHOOK] Track downloaded: ${type} - ${trackTitle}`);
-    } catch (e) {
-      console.error(e);
-    }
+  const toggleAccordion = (id: string) => {
+    setOpenAccordions(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
   };
 
-  const openClearanceModal = (title: string) => {
-    setSelectedTrack(title);
-    setIsModalOpen(true);
+  const handleDownload = (type: string, trackTitle: string) => {
+    alert(`DOWNLOAD STARTED: ${trackTitle} (${type})`);
   };
 
   if (loading) {
@@ -160,7 +178,7 @@ function VaultPageContent() {
           <form 
             onSubmit={(e) => { 
               e.preventDefault(); 
-              window.location.href = `/vault?key=${keyInput}`; 
+              window.location.href = `/vault?key=${keyInput.trim().toUpperCase()}`; 
             }} 
             className="flex flex-col gap-4 mt-2"
           >
@@ -179,9 +197,6 @@ function VaultPageContent() {
               <button type="submit" className="flex-1 text-xs font-bold bg-[#1D1D1F] text-white px-6 py-3.5 hover:bg-black transition-colors uppercase tracking-widest">
                 [ VERIFY KEY ]
               </button>
-              <Link href="/contact" className="flex-1 text-xs font-bold bg-transparent text-[#1D1D1F] border border-[#1D1D1F] px-6 py-3.5 hover:bg-black/5 transition-colors uppercase text-center flex items-center justify-center tracking-widest">
-                [ REQUEST PERMISSION ]
-              </Link>
             </div>
           </form>
 
@@ -216,77 +231,194 @@ function VaultPageContent() {
             </div>
           </div>
         </main>
+
+        <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-[10px] text-[#86868B] border-t border-[#E8E8ED]">
+          <span>© 2026 TMY ARCHIVE // VAULT SECTOR</span>
+          <span className="font-mono">AUDIO ENGINE: ACTIVE</span>
+        </footer>
       </div>
     );
   }
 
-  // STATE B: AUTHORIZED
+  // Filtered tracks for Vault
+  const isArtist = accessTier === 'artist';
+
+  const displayedTracks = tracks.filter(t => {
+    if (activeTab === 'public') {
+      return !t.is_vault_only;
+    } else {
+      // Private vault
+      if (!t.is_vault_only) return false;
+      if (!t.assigned_user) return true; // General unassigned private vault
+      return t.assigned_user.toLowerCase() === clientName.toLowerCase();
+    }
+  });
+
+  // STATE B: AUTHORIZED (Original Accordion Layout from vault.html)
   return (
-    <div className="min-h-screen bg-[#F5F5F7] font-mono text-[#1D1D1F] flex flex-col">
-      {/* Global Top Header */}
+    <div className="min-h-screen bg-[#F5F5F7] font-mono text-[#1D1D1F] flex flex-col antialiased">
+      {/* Top Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#E8E8ED]">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link href="/" className="font-bold text-lg text-[#1D1D1F] tracking-tight">tmy</Link>
           
-          <div className="flex items-center gap-4 text-xs font-medium">
-            {accessTier === 'admin' && (
-              <Link href="/admin" className="text-[#FF3B30] hover:bg-red-50 px-2.5 py-1.5 rounded transition-colors flex items-center font-bold">[ ADMIN ]</Link>
-            )}
-            <span className="text-[#1D1D1F] font-bold">
-              {clientName} ({accessTier.toUpperCase()})
+          <div className="flex items-center gap-4 text-xs">
+            <span className="text-[#1D1D1F] font-bold hidden sm:inline">
+              {clientName.toUpperCase()} [{accessTier.toUpperCase()}]
             </span>
-            <button onClick={handleLogout} className="text-[#86868B] hover:text-[#1D1D1F] px-2.5 py-1.5 transition-colors flex items-center font-mono">[ LOGOUT ]</button>
+            <button onClick={handleLogout} className="text-[#86868B] hover:text-[#1D1D1F] transition-colors">[ LOGOUT ]</button>
           </div>
         </div>
       </header>
 
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 sm:py-12 flex flex-col gap-6">
+        
+        {/* Top Action Bar & Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E8E8ED] pb-4">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-[#1D1D1F]">
+            {isArtist 
+              ? `PRIVATE VAULT // ASSIGNED TO: ${clientName.toUpperCase()}`
+              : (activeTab === 'public' ? 'PUBLIC VAULT // ALL STEMS' : `PRIVATE VAULT // ${clientName.toUpperCase()}`)
+            }
+          </h2>
 
-
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-12 flex flex-col gap-8">
-        <h1 className="text-xl font-bold uppercase tracking-widest text-[#1D1D1F] border-b border-[#E8E8ED] pb-4">
-          EXCLUSIVE VAULT
-        </h1>
-
-        <div className="flex flex-col gap-8">
-          {tracks.map((track) => (
-            <div key={track.id} className="bg-[#FFFFFF] rounded-lg border border-[#E8E8ED] p-4 flex flex-col gap-4 shadow-sm">
-              {/* Metadata */}
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="font-bold text-sm text-[#1D1D1F] uppercase">{track.title}</span>
-                  <span className="text-xs text-[#86868B] uppercase">{track.bpm} BPM // {track.key}</span>
-                </div>
-                <span className="text-xs text-[#86868B]">ADDED: {track.date}</span>
-              </div>
-              
-              {/* Audio Player */}
-              <AudioPlayer src={track.src} />
-              
-              {/* Action Bar */}
-              <div className="pt-4 border-t border-[#E8E8ED] flex flex-col sm:flex-row gap-2 justify-end">
-                <button onClick={() => handleDownload('MP3 DEMO', track.title)} className="text-[10px] sm:text-xs bg-[#F5F5F7] border border-[#E8E8ED] px-3 py-2 uppercase hover:bg-black/5 transition-colors">
-                  [ MP3 DEMO ]
-                </button>
-                <button onClick={() => handleDownload('WAV UNCUT', track.title)} className="text-[10px] sm:text-xs bg-[#F5F5F7] border border-[#E8E8ED] px-3 py-2 uppercase hover:bg-black/5 transition-colors">
-                  [ WAV UNCUT ]
-                </button>
-                <button onClick={() => handleDownload('STEMS', track.title)} className="text-[10px] sm:text-xs bg-[#F5F5F7] border border-[#E8E8ED] px-3 py-2 uppercase font-bold hover:bg-black/5 transition-colors">
-                  [ DOWNLOAD STEMS (.ZIP) ]
-                </button>
-                <button onClick={() => openClearanceModal(track.title)} className="text-[10px] sm:text-xs bg-transparent border border-dashed border-[#1D1D1F] text-[#1D1D1F] px-4 py-2 uppercase hover:bg-[#F5F5F7] transition-colors ml-0 sm:ml-2">
-                  [ REQUEST CLEARANCE ]
-                </button>
-              </div>
+          {/* Tab Bar (Hidden for restricted Artist role) */}
+          {!isArtist && (
+            <div className="flex items-center gap-6">
+              <button 
+                onClick={() => setActiveTab('public')}
+                className={`text-xs font-bold uppercase tracking-widest transition-colors pb-1 ${
+                  activeTab === 'public' 
+                    ? 'text-[#1D1D1F] border-b-2 border-[#1D1D1F]' 
+                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                }`}
+              >
+                [ PUBLIC VAULT ]
+              </button>
+              <button 
+                onClick={() => setActiveTab('private')}
+                className={`text-xs font-bold uppercase tracking-widest transition-colors pb-1 ${
+                  activeTab === 'private' 
+                    ? 'text-[#1D1D1F] border-b-2 border-[#1D1D1F]' 
+                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                }`}
+              >
+                [ PRIVATE VAULT ]
+              </button>
             </div>
-          ))}
+          )}
+        </div>
+
+        {/* Accordion Tracklist List Container */}
+        <div className="flex flex-col divide-y divide-[#E8E8ED]">
+          {displayedTracks.length === 0 ? (
+            <div className="p-8 text-center border border-dashed border-[#E8E8ED] text-[#86868B] text-xs uppercase tracking-widest">
+              NO EXCLUSIVE TRACKS CURRENTLY ASSIGNED TO YOUR SECTOR.
+            </div>
+          ) : (
+            displayedTracks.map((track) => {
+              const isOpen = !!openAccordions[track.id];
+              const isPlaying = playingTrackId === track.id;
+              const trackDate = track.created_at ? new Date(track.created_at).toISOString().split('T')[0] : '2026-08';
+
+              return (
+                <div key={track.id} className="border-b border-[#E8E8ED] py-4 flex flex-col transition-colors">
+                  <div 
+                    onClick={() => toggleAccordion(track.id)}
+                    className="flex items-center justify-between gap-4 cursor-pointer select-none group"
+                  >
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePlay(track.id, track.mp3_url);
+                        }}
+                        className="w-9 h-9 rounded-full border border-[#E8E8ED] flex items-center justify-center text-[#1D1D1F] hover:bg-black/5 transition-all flex-shrink-0"
+                      >
+                        {isPlaying ? (
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        ) : (
+                          <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        )}
+                      </button>
+
+                      <div className="flex flex-col truncate">
+                        <span className="font-bold text-sm text-[#1D1D1F] tracking-wide group-hover:underline truncate">
+                          {track.title}
+                        </span>
+                        <span className="text-xs text-[#86868B]">
+                          {track.bpm || '---'} BPM // {track.key || '---'}{' '}
+                          <span className="border border-[#E8E8ED] px-1 rounded ml-1 text-[9px] uppercase font-bold">
+                            {track.track_type || 'BEAT'}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="hidden md:block text-xs text-[#86868B] font-mono">
+                      {trackDate}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload('PREVIEW', track.title);
+                        }}
+                        className="text-xs border border-[#E8E8ED] px-2.5 py-1.5 hover:bg-black/5 transition-colors uppercase font-medium hidden sm:flex items-center gap-1.5"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        <span>PREVIEW</span>
+                      </button>
+
+                      <span className="text-xs text-[#86868B] group-hover:text-[#1D1D1F] transition-transform duration-200">
+                        {isOpen ? '[ − ]' : '[ + ]'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Accordion Content */}
+                  {isOpen && (
+                    <div className="pt-4 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <button 
+                          onClick={() => handleDownload('STEMS (WAV-ZIP)', track.title)}
+                          className="p-3 bg-[#F5F5F7] hover:bg-black/5 border border-[#E8E8ED] rounded text-left flex flex-col justify-between gap-2 transition-all group"
+                        >
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D1D1F]">[ STEMS (WAV-ZIP) ]</span>
+                          <span className="text-[10px] text-[#86868B]">24-Bit Dry & Wet Stems</span>
+                        </button>
+
+                        <button 
+                          onClick={() => handleDownload('PROJECT (.FLP)', track.title)}
+                          className="p-3 bg-[#F5F5F7] hover:bg-black/5 border border-[#E8E8ED] rounded text-left flex flex-col justify-between gap-2 transition-all group"
+                        >
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D1D1F]">[ PROJECT (.FLP) ]</span>
+                          <span className="text-[10px] text-[#86868B]">FL Studio Project File</span>
+                        </button>
+
+                        <div className="p-3 bg-[#F5F5F7]/50 border border-[#E8E8ED] rounded text-left flex flex-col justify-between gap-1">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868B]">[ CREDITS ]</span>
+                          <span className="text-[10px] text-[#1D1D1F] truncate font-medium">{track.credits || 'PROD. TMY'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </main>
 
-      <CollabModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        trackTitle={selectedTrack} 
-      />
+      {/* Footer */}
+      <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-[10px] text-[#86868B] border-t border-[#E8E8ED]">
+        <span>© 2026 TMY ARCHIVE // VAULT SECTOR</span>
+        <span className="font-mono">AUDIO ENGINE: ACTIVE</span>
+      </footer>
     </div>
   );
 }
@@ -299,7 +431,6 @@ export default function VaultPage() {
   );
 }
 
-// Helper to get cookies in client
 function getCookie(name: string) {
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);

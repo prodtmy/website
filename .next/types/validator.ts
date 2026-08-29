@@ -77,7 +77,7 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 // Validate ../../app/api/upload-beat/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/upload-beat">> = Specific
-  const handler = {} as typeof import("../../app/api/upload-beat/max nacke.js")
+  const handler = {} as typeof import("../../app/api/upload-beat/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
