@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
+import { analyzeAudioFile } from '@/utils/audioAnalyzer';
 
 export default function AdminPage() {
   const supabase = createClient();
@@ -25,7 +26,7 @@ export default function AdminPage() {
   const [editingTrack, setEditingTrack] = useState<any | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editType, setEditType] = useState('BEAT');
-  const [editBpm, setEditBpm] = useState(140);
+  const [editBpm, setEditBpm] = useState<number | string>('');
   const [editKey, setEditKey] = useState('F# MIN');
   const [editCredits, setEditCredits] = useState('PROD. TMY');
   const [editDestination, setEditDestination] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
@@ -48,8 +49,9 @@ export default function AdminPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadType, setUploadType] = useState('BEAT');
-  const [uploadBpm, setUploadBpm] = useState('140');
-  const [uploadKey, setUploadKey] = useState('F# MIN');
+  const [uploadBpm, setUploadBpm] = useState('');
+  const [uploadKey, setUploadKey] = useState('');
+  const [isAnalyzingAudio, setIsAnalyzingAudio] = useState(false);
   const [uploadDestination, setUploadDestination] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
   const [uploadAssignedUser, setUploadAssignedUser] = useState('');
   const [mp3File, setMp3File] = useState<File | null>(null);
@@ -240,8 +242,8 @@ export default function AdminPage() {
     setEditingTrack(track);
     setEditTitle(track.title || '');
     setEditType(track.track_type || 'BEAT');
-    setEditBpm(track.bpm || 140);
-    setEditKey(track.key || 'F# MIN');
+    setEditBpm(track.bpm || '');
+    setEditKey(track.key || '');
     setEditCredits(track.credits || 'PROD. TMY');
     setEditDestination(track.is_vault_only ? 'PRIVATE' : 'PUBLIC');
     setEditLanding(track.is_landing !== false ? 'true' : 'false');
@@ -348,6 +350,50 @@ export default function AdminPage() {
     }
   };
 
+  const parseTrackFilename = (filename: string) => {
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/, '').trim();
+
+    let bpm: string | null = null;
+    let key: string | null = null;
+
+    // 1. Detect BPM: e.g. 140bpm, 140 bpm, 140BPM, _140_
+    const bpmMatch = nameWithoutExt.match(/(?:^|[\s_.-])(7[0-9]|[8-9][0-9]|1[0-9]{2})\s*(?:bpm)?(?:$|[\s_.-])/i);
+    if (bpmMatch) {
+      bpm = bpmMatch[1];
+    }
+
+    // 2. Detect Key: e.g. F#m, F# min, F# minor, F# maj, C#m, Bb maj, Fm, G# MIN
+    const keyMatch = nameWithoutExt.match(/(?:^|[\s_.-])([A-G][b#]?)\s*(min|maj|minor|major|m)?(?:$|[\s_.-])/i);
+    if (keyMatch) {
+      const root = keyMatch[1].toUpperCase();
+      const modeRaw = (keyMatch[2] || '').toLowerCase();
+
+      let mode = 'MIN';
+      if (modeRaw === 'maj' || modeRaw === 'major') {
+        mode = 'MAJ';
+      } else if (modeRaw === 'min' || modeRaw === 'minor' || modeRaw === 'm') {
+        mode = 'MIN';
+      }
+      key = `${root} ${mode}`;
+    }
+
+    // 3. Clean Title
+    let cleanTitle = nameWithoutExt;
+    if (bpm) {
+      cleanTitle = cleanTitle.replace(new RegExp(`(?:^|[\\s_.-])${bpm}\\s*(?:bpm)?(?:$|[\\s_.-])`, 'gi'), ' ');
+    }
+    if (keyMatch) {
+      cleanTitle = cleanTitle.replace(keyMatch[0], ' ');
+    }
+    cleanTitle = cleanTitle.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+    return {
+      title: cleanTitle ? cleanTitle.toUpperCase() : nameWithoutExt.toUpperCase(),
+      bpm,
+      key,
+    };
+  };
+
   const processSelectedFiles = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
@@ -374,10 +420,25 @@ export default function AdminPage() {
     if (newFlp) setFlpFile(newFlp);
     setDropzoneFile(fileArray[0]);
 
-    const primaryAudio = newMp3 || newWav || fileArray[0];
-    if (primaryAudio && !uploadTitle) {
-      const baseName = primaryAudio.name.replace(/\.[^/.]+$/, "");
-      setUploadTitle(baseName.toUpperCase().replace(/[^A-Z0-9_-]/g, '_'));
+    const primaryAudio = (newMp3 || newWav) as File | null;
+    if (primaryAudio) {
+      const parsed = parseTrackFilename((primaryAudio as File).name);
+      if (parsed.title) setUploadTitle(parsed.title);
+      if (parsed.bpm) setUploadBpm(parsed.bpm);
+      if (parsed.key) setUploadKey(parsed.key);
+
+      // Perform deep Audio Buffer Analysis via Web Audio API if BPM or Key is missing from filename!
+      if (!parsed.bpm || !parsed.key) {
+        setIsAnalyzingAudio(true);
+        analyzeAudioFile(primaryAudio)
+          .then(({ bpm, key }) => {
+            if (bpm && !parsed.bpm) setUploadBpm(bpm);
+            if (key && !parsed.key) setUploadKey(key);
+          })
+          .finally(() => {
+            setIsAnalyzingAudio(false);
+          });
+      }
     }
   };
 
@@ -1099,23 +1160,29 @@ export default function AdminPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ BPM ]</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold uppercase text-zinc-900">[ BPM ]</label>
+                      <span className="text-[9px] font-bold text-zinc-400 uppercase">OPTIONAL</span>
+                    </div>
                     <input 
-                      type="number" 
+                      type="text" 
                       value={uploadBpm} 
                       onChange={(e) => setUploadBpm(e.target.value)} 
-                      required 
+                      placeholder={isAnalyzingAudio ? "Detecting..." : "e.g. 140"}
                       className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono rounded-md transition-all font-semibold" 
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ KEY ]</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold uppercase text-zinc-900">[ KEY ]</label>
+                      <span className="text-[9px] font-bold text-zinc-400 uppercase">OPTIONAL</span>
+                    </div>
                     <input 
                       type="text" 
                       value={uploadKey} 
                       onChange={(e) => setUploadKey(e.target.value)} 
-                      required 
+                      placeholder={isAnalyzingAudio ? "Detecting..." : "e.g. F# MIN"}
                       className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono uppercase rounded-md transition-all font-semibold" 
                     />
                   </div>
@@ -1428,22 +1495,28 @@ export default function AdminPage() {
               {/* Row 2: BPM, Key, Credits */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ BPM ]</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ BPM ]</label>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase">OPTIONAL</span>
+                  </div>
                   <input 
-                    type="number" 
+                    type="text" 
                     value={editBpm}
-                    onChange={(e) => setEditBpm(Number(e.target.value))}
-                    required 
+                    onChange={(e) => setEditBpm(e.target.value)}
+                    placeholder="e.g. 140"
                     className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono rounded-md font-semibold" 
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ KEY ]</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ KEY ]</label>
+                    <span className="text-[9px] font-bold text-zinc-400 uppercase">OPTIONAL</span>
+                  </div>
                   <input 
                     type="text" 
                     value={editKey}
                     onChange={(e) => setEditKey(e.target.value)}
-                    required 
+                    placeholder="e.g. F# MIN"
                     className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono uppercase rounded-md font-semibold" 
                   />
                 </div>
