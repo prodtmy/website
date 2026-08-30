@@ -805,15 +805,24 @@ export default function AdminPage() {
 
           {/* TAB 2: ASSET UPLOAD */}
           {activeTab === 'upload' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-sm font-bold uppercase tracking-widest text-[#1D1D1F]">[ ASSET UPLOAD // MEDIA DEPLOYMENT ]</h2>
-                <p className="text-xs text-[#86868B] mt-1">Upload audio previews, uncompressed WAVs, stem archives (.ZIP) or FL Studio project files (.FLP).</p>
+            <div className="space-y-6 animate-fadeIn">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-200 pb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-900">[ ASSET UPLOAD // MEDIA DEPLOYMENT ]</h2>
+                    <span className="text-[9px] font-bold uppercase bg-zinc-900 text-white px-2 py-0.5 rounded-full tracking-wider">PRO STUDIO</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-1">Deploy audio previews, uncompressed master WAVs, stem archives (.ZIP) or FL Studio project files (.FLP).</p>
+                </div>
               </div>
 
               {/* Drag & Drop Zone */}
               <div 
-                className="dropzone p-8 sm:p-12 text-center rounded-lg bg-white cursor-pointer relative group flex flex-col items-center justify-center gap-3 border-2 border-dashed border-[#D2D2D7] hover:border-[#1D1D1F] transition-colors"
+                className={`dropzone p-8 sm:p-12 text-center rounded-xl relative group flex flex-col items-center justify-center gap-4 border-2 border-dashed transition-all duration-200 shadow-sm ${
+                  mp3File || wavFile || flpFile 
+                    ? 'border-zinc-900 bg-gradient-to-b from-zinc-50/80 to-white shadow-md' 
+                    : 'border-zinc-300 hover:border-zinc-900 bg-white hover:bg-zinc-50/60'
+                }`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -831,59 +840,108 @@ export default function AdminPage() {
                       processSelectedFiles(e.target.files);
                     }
                   }}
-                  className="absolute inset-0 opacity-0 cursor-pointer" 
+                  className="absolute inset-0 opacity-0 cursor-pointer z-10" 
                 />
-                <svg className="w-8 h-8 text-[#86868B] group-hover:text-[#1D1D1F] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                 
-                <div className="text-xs font-bold uppercase tracking-wider text-[#1D1D1F]">
-                  {mp3File || wavFile || flpFile ? (
-                    <div className="flex flex-col gap-1 items-center">
-                      <span className="underline">[ SELECTED FILES ]</span>
-                      {mp3File && <span className="text-emerald-600 font-mono">✓ MP3 PREVIEW: {mp3File.name}</span>}
-                      {wavFile && <span className="text-blue-600 font-mono">✓ MASTER WAV: {wavFile.name}</span>}
-                      {flpFile && <span className="text-purple-600 font-mono">✓ STEMS / FLP: {flpFile.name}</span>}
-                    </div>
-                  ) : (
-                    <span>DRAG & DROP FILES HERE (MP3, WAV, ZIP/FLP) OR CLICK TO BROWSE</span>
-                  )}
+                <div className="w-12 h-12 rounded-full bg-zinc-100 group-hover:bg-zinc-900 group-hover:text-white text-zinc-600 flex items-center justify-center transition-all duration-200 group-hover:scale-110 shadow-inner">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                  </svg>
                 </div>
-                <span className="text-[10px] text-[#86868B]">MINIMUM REQUIREMENT: MP3 OR WAV FILE (WAV WILL BE USED AS PREVIEW IF NO MP3 IS PROVIDED)</span>
+
+                {mp3File || wavFile || flpFile ? (
+                  <div className="w-full max-w-xl space-y-2 z-0">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">[ ATTACHED ASSETS ]</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-left">
+                      {/* MP3 Pill */}
+                      <div className={`p-3 rounded-lg border text-xs font-mono transition-all ${mp3File ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950' : 'border-dashed border-zinc-200 bg-zinc-50/50 text-zinc-400'}`}>
+                        <div className="flex items-center justify-between font-bold text-[10px] uppercase">
+                          <span>MP3 PREVIEW</span>
+                          {mp3File ? <span className="text-emerald-600 font-sans text-[9px] bg-emerald-100 px-1.5 py-0.5 rounded font-bold">READY</span> : <span>OPTIONAL</span>}
+                        </div>
+                        <p className="truncate mt-1 text-[11px] font-semibold">{mp3File ? mp3File.name : 'Not selected'}</p>
+                      </div>
+
+                      {/* WAV Pill */}
+                      <div className={`p-3 rounded-lg border text-xs font-mono transition-all ${wavFile ? 'border-blue-200 bg-blue-50/70 text-blue-950' : 'border-dashed border-zinc-200 bg-zinc-50/50 text-zinc-400'}`}>
+                        <div className="flex items-center justify-between font-bold text-[10px] uppercase">
+                          <span>MASTER WAV</span>
+                          {wavFile ? <span className="text-blue-600 font-sans text-[9px] bg-blue-100 px-1.5 py-0.5 rounded font-bold">READY</span> : <span>OPTIONAL</span>}
+                        </div>
+                        <p className="truncate mt-1 text-[11px] font-semibold">{wavFile ? wavFile.name : 'Not selected'}</p>
+                      </div>
+
+                      {/* STEMS Pill */}
+                      <div className={`p-3 rounded-lg border text-xs font-mono transition-all ${flpFile ? 'border-purple-200 bg-purple-50/70 text-purple-950' : 'border-dashed border-zinc-200 bg-zinc-50/50 text-zinc-400'}`}>
+                        <div className="flex items-center justify-between font-bold text-[10px] uppercase">
+                          <span>STEMS / FLP</span>
+                          {flpFile ? <span className="text-purple-600 font-sans text-[9px] bg-purple-100 px-1.5 py-0.5 rounded font-bold">READY</span> : <span>OPTIONAL</span>}
+                        </div>
+                        <p className="truncate mt-1 text-[11px] font-semibold">{flpFile ? flpFile.name : 'Not selected'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-900 block">
+                      DRAG & DROP FILES HERE (MP3, WAV, ZIP / FLP)
+                    </span>
+                    <span className="text-[10px] text-zinc-500 block">
+                      OR CLICK ANYWHERE TO BROWSE LOCAL DISK
+                    </span>
+                  </div>
+                )}
+                
+                <div className="text-[10px] text-zinc-400 bg-zinc-100/80 px-3 py-1 rounded-full font-mono uppercase">
+                  REQUIREMENT: MINIMUM 1 AUDIO FILE (MP3 OR WAV)
+                </div>
               </div>
 
               {/* Upload Progress Bar */}
               {uploadProgress !== null && (
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-[#1D1D1F] font-bold">
-                    <span>TRANSMITTING ASSETS TO VAULT...</span>
+                <div className="space-y-2 bg-zinc-900 text-white p-4 rounded-xl shadow-lg">
+                  <div className="flex items-center justify-between text-[11px] font-mono font-bold tracking-wider">
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                      TRANSMITTING ASSETS TO SUPABASE STORAGE SECTOR...
+                    </span>
                     <span>{uploadProgress}%</span>
                   </div>
-                  <div className="w-full h-2 bg-[#E8E8ED] rounded-full overflow-hidden">
-                    <div className="h-full bg-[#1D1D1F] transition-all duration-150" style={{ width: `${uploadProgress}%` }}></div>
+                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden p-0.5">
+                    <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-300 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
                   </div>
                 </div>
               )}
 
               {/* Metadata Form */}
-              <form onSubmit={handleUploadSubmit} className="bg-white p-6 rounded-lg border border-[#E8E8ED] space-y-4">
+              <form onSubmit={handleUploadSubmit} className="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm space-y-5">
+                <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900 flex items-center gap-2">
+                    <span>🎛️</span>
+                    <span>[ METADATA CONFIGURATION ]</span>
+                  </h3>
+                  <span className="text-[10px] font-mono text-zinc-400">ID: AUTO_GEN</span>
+                </div>
+
                 <div key={fileInputKey} className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ TRACK TITLE ]</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ TRACK TITLE ]</label>
                     <input 
                       type="text" 
                       value={uploadTitle} 
                       onChange={(e) => setUploadTitle(e.target.value)} 
                       required 
                       placeholder="e.g. CYBER_PUNK_140" 
-                      className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" 
+                      className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono uppercase rounded-md transition-all font-semibold" 
                     />
                   </div>
                   
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ TYPE ]</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ TYPE ]</label>
                     <select 
                       value={uploadType} 
                       onChange={(e) => setUploadType(e.target.value)}
-                      className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono font-bold"
+                      className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono font-bold rounded-md transition-all"
                     >
                       <option value="BEAT">BEAT</option>
                       <option value="LOOP">LOOP</option>
@@ -891,49 +949,49 @@ export default function AdminPage() {
                     </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ BPM ]</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ BPM ]</label>
                     <input 
                       type="number" 
                       value={uploadBpm} 
                       onChange={(e) => setUploadBpm(e.target.value)} 
                       required 
-                      className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono" 
+                      className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono rounded-md transition-all font-semibold" 
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ KEY ]</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ KEY ]</label>
                     <input 
                       type="text" 
                       value={uploadKey} 
                       onChange={(e) => setUploadKey(e.target.value)} 
                       required 
-                      className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" 
+                      className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono uppercase rounded-md transition-all font-semibold" 
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ TARGET VAULT ]</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ TARGET VAULT ]</label>
                     <select 
                       value={uploadDestination} 
                       onChange={(e: any) => setUploadDestination(e.target.value)}
-                      className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono font-bold"
+                      className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono font-bold rounded-md transition-all"
                     >
                       <option value="PUBLIC">PUBLIC VAULT (All Authorized Users & Landing)</option>
                       <option value="PRIVATE">PRIVATE VAULT (Assigned User Only)</option>
                     </select>
                   </div>
                   
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ ASSIGN TO USER (DROPDOWN) ]</label>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ ASSIGN TO USER ]</label>
                     <select 
                       value={uploadAssignedUser} 
                       onChange={(e) => setUploadAssignedUser(e.target.value)}
                       disabled={uploadDestination === 'PUBLIC'}
-                      className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono font-bold disabled:opacity-50"
+                      className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono font-bold disabled:opacity-40 rounded-md transition-all"
                     >
                       <option value="">-- SELECT ASSIGNED USER --</option>
                       {users.filter(u => u.is_active).map(u => (
@@ -945,54 +1003,62 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* Additional Optional Asset Files */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E8E8ED]">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-[#86868B] flex items-center justify-between">
-                      <span>[ PREVIEW AUDIO (MP3) ]</span>
-                      {mp3File && <span className="text-emerald-600 text-[9px] font-bold">✓ READY</span>}
-                    </label>
-                    <input 
-                      type="file" 
-                      accept="audio/*" 
-                      onChange={(e) => setMp3File(e.target.files?.[0] || null)}
-                      className="w-full text-xs" 
-                    />
-                    {mp3File && <p className="text-[10px] text-emerald-700 truncate font-mono">{mp3File.name}</p>}
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-[#86868B] flex items-center justify-between">
-                      <span>[ MASTER WAV ]</span>
-                      {wavFile && <span className="text-blue-600 text-[9px] font-bold">✓ READY</span>}
-                    </label>
-                    <input 
-                      type="file" 
-                      accept="audio/wav,audio/x-wav,.wav" 
-                      onChange={(e) => setWavFile(e.target.files?.[0] || null)}
-                      className="w-full text-xs" 
-                    />
-                    {wavFile && <p className="text-[10px] text-blue-700 truncate font-mono">{wavFile.name}</p>}
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-[#86868B] flex items-center justify-between">
-                      <span>[ STEMS / FLP ARCHIVE ]</span>
-                      {flpFile && <span className="text-purple-600 text-[9px] font-bold">✓ READY</span>}
-                    </label>
-                    <input 
-                      type="file" 
-                      accept=".flp,.zip,.rar" 
-                      onChange={(e) => setFlpFile(e.target.files?.[0] || null)}
-                      className="w-full text-xs" 
-                    />
-                    {flpFile && <p className="text-[10px] text-purple-700 truncate font-mono">{flpFile.name}</p>}
+                {/* Additional File Pickers */}
+                <div className="space-y-2 pt-3 border-t border-zinc-100">
+                  <span className="text-[11px] font-bold uppercase text-zinc-900 block">[ INDIVIDUAL FILE PICKERS ]</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* MP3 Picker */}
+                    <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] font-bold uppercase text-zinc-700">
+                        <span>PREVIEW MP3</span>
+                        {mp3File ? <span className="text-emerald-600">✓ ATTACHED</span> : <span className="text-zinc-400">OPTIONAL</span>}
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="audio/*" 
+                        onChange={(e) => setMp3File(e.target.files?.[0] || null)}
+                        className="w-full text-[11px] text-zinc-600 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-zinc-200 hover:file:bg-zinc-300 cursor-pointer" 
+                      />
+                    </div>
+
+                    {/* WAV Picker */}
+                    <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] font-bold uppercase text-zinc-700">
+                        <span>MASTER WAV</span>
+                        {wavFile ? <span className="text-blue-600">✓ ATTACHED</span> : <span className="text-zinc-400">OPTIONAL</span>}
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="audio/wav,audio/x-wav,.wav" 
+                        onChange={(e) => setWavFile(e.target.files?.[0] || null)}
+                        className="w-full text-[11px] text-zinc-600 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-zinc-200 hover:file:bg-zinc-300 cursor-pointer" 
+                      />
+                    </div>
+
+                    {/* FLP Picker */}
+                    <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px] font-bold uppercase text-zinc-700">
+                        <span>STEMS / FLP</span>
+                        {flpFile ? <span className="text-purple-600">✓ ATTACHED</span> : <span className="text-zinc-400">OPTIONAL</span>}
+                      </div>
+                      <input 
+                        type="file" 
+                        accept=".flp,.zip,.rar" 
+                        onChange={(e) => setFlpFile(e.target.files?.[0] || null)}
+                        className="w-full text-[11px] text-zinc-600 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-zinc-200 hover:file:bg-zinc-300 cursor-pointer" 
+                      />
+                    </div>
                   </div>
                 </div>
 
                 <button 
                   type="submit" 
-                  className="w-full bg-[#1D1D1F] text-white text-xs font-bold py-3 hover:bg-black transition-colors uppercase tracking-widest"
+                  className="w-full bg-gradient-to-r from-zinc-900 to-black text-white hover:from-black hover:to-zinc-800 text-xs font-bold py-3.5 px-6 rounded-lg transition-all shadow-md hover:shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 uppercase tracking-widest mt-4"
                 >
-                  [ DEPLOY ASSET TO VAULT ]
+                  <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  <span>[ DEPLOY ASSETS TO VAULT SECTOR ]</span>
                 </button>
               </form>
             </div>
