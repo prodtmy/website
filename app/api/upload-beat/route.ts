@@ -33,7 +33,6 @@ export async function POST(request: Request) {
       mp3Url,
       wavPath,
       flpPath,
-      track_type = 'BEAT',
     } = body;
 
     // 3. Sicherheitscheck: Sind die wichtigsten Daten da?
@@ -44,7 +43,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. In die Datenbank eintragen mit Service Role Key und korrektem /public/ Pfad
+    // 4. In die Datenbank eintragen mit exakten Supabase-Spalten
     const { data: track, error: dbError } = await supabase
       .from('tracks')
       .insert([
@@ -56,9 +55,7 @@ export async function POST(request: Request) {
           wav_path: ensurePublicUrl(wavPath),
           flp_path: ensurePublicUrl(flpPath),
           is_vault_only: Boolean(isVaultOnly),
-          assigned_user: isVaultOnly ? (assignedUser || null) : null,
-          access_tier: accessTier,
-          track_type: track_type,
+          access_tier: isVaultOnly ? (assignedUser || accessTier || 'artist') : 'standard',
         },
       ])
       .select()

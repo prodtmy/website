@@ -28,13 +28,24 @@ export async function POST(request: Request) {
     if (action === 'update_track') {
       const { id, updateData } = payload;
       
-      if (updateData.mp3_url) updateData.mp3_url = ensurePublicUrl(updateData.mp3_url);
-      if (updateData.wav_path) updateData.wav_path = ensurePublicUrl(updateData.wav_path);
-      if (updateData.flp_path) updateData.flp_path = ensurePublicUrl(updateData.flp_path);
+      // Clean object to ONLY include columns present in Supabase Postgres schema
+      const cleanedData: any = {};
+      if (updateData.title !== undefined) cleanedData.title = updateData.title;
+      if (updateData.bpm !== undefined) cleanedData.bpm = updateData.bpm ? parseInt(String(updateData.bpm), 10) : null;
+      if (updateData.key !== undefined) cleanedData.key = updateData.key;
+      if (updateData.mp3_url !== undefined) cleanedData.mp3_url = ensurePublicUrl(updateData.mp3_url);
+      if (updateData.wav_path !== undefined) cleanedData.wav_path = ensurePublicUrl(updateData.wav_path);
+      if (updateData.flp_path !== undefined) cleanedData.flp_path = ensurePublicUrl(updateData.flp_path);
+      if (updateData.is_vault_only !== undefined) cleanedData.is_vault_only = Boolean(updateData.is_vault_only);
+      
+      // Map target user / access tier to existing 'access_tier' column
+      if (updateData.assigned_user !== undefined || updateData.access_tier !== undefined) {
+        cleanedData.access_tier = updateData.assigned_user || updateData.access_tier || 'standard';
+      }
 
       const { data, error } = await supabase
         .from('tracks')
-        .update(updateData)
+        .update(cleanedData)
         .eq('id', id)
         .select()
         .single();
