@@ -52,7 +52,7 @@ export default function AdminPage() {
   const [uploadBpm, setUploadBpm] = useState('');
   const [uploadKey, setUploadKey] = useState('');
   const [isAnalyzingAudio, setIsAnalyzingAudio] = useState(false);
-  const [uploadDestination, setUploadDestination] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
+  const [uploadDestination, setUploadDestination] = useState<'PUBLIC' | 'PRIVATE'>('PRIVATE');
   const [uploadAssignedUser, setUploadAssignedUser] = useState('');
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [wavFile, setWavFile] = useState<File | null>(null);
@@ -218,7 +218,12 @@ export default function AdminPage() {
         updateData.is_vault_only = value === 'PRIVATE';
         if (value === 'PUBLIC') updateData.assigned_user = null;
       }
-      else if (field === 'landing') updateData.is_landing = value === 'true';
+      else if (field === 'landing') {
+        // ON ('true') -> Public (is_vault_only: false)
+        // OFF ('false') -> Private (is_vault_only: true)
+        updateData.is_vault_only = value !== 'true';
+        if (value === 'true') updateData.assigned_user = null;
+      }
       else if (field === 'assigned_user') updateData.assigned_user = value || null;
 
       const res = await fetch('/api/admin', {
@@ -246,7 +251,7 @@ export default function AdminPage() {
     setEditKey(track.key || '');
     setEditCredits(track.credits || 'PROD. TMY');
     setEditDestination(track.is_vault_only ? 'PRIVATE' : 'PUBLIC');
-    setEditLanding(track.is_landing !== false ? 'true' : 'false');
+    setEditLanding(!track.is_vault_only ? 'true' : 'false');
     setEditAssignedUser(track.assigned_user || '');
     setEditMp3File(null);
     setEditWavFile(null);
@@ -302,7 +307,7 @@ export default function AdminPage() {
         flpPath = await uploadFileViaApi(editFlpFile, 'tracks', 'stems');
       }
 
-      const isVaultOnly = editDestination === 'PRIVATE';
+      const isVaultOnly = editLanding === 'false' || editDestination === 'PRIVATE';
 
       const res = await fetch('/api/admin', {
         method: 'POST',
@@ -882,15 +887,15 @@ export default function AdminPage() {
                                     </select>
                                   </div>
 
-                                  <div className={`flex items-center gap-1.5 ${vaultValue !== 'PUBLIC' ? 'opacity-40 pointer-events-none' : ''}`}>
-                                    <span className="text-[10px] font-bold text-[#86868B] uppercase">LANDING:</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-bold text-[#86868B] uppercase">LANDING PAGE:</span>
                                     <select
-                                      value={track.is_landing !== false ? 'true' : 'false'}
+                                      value={!track.is_vault_only ? 'true' : 'false'}
                                       onChange={(e) => handleUpdateTrackField(track.id, 'landing', e.target.value)}
                                       className="bg-transparent border-none text-xs focus:outline-none font-mono rounded cursor-pointer font-bold"
                                     >
-                                      <option value="true">ON</option>
-                                      <option value="false">OFF</option>
+                                      <option value="true">ON (VISIBLE)</option>
+                                      <option value="false">OFF (HIDDEN)</option>
                                     </select>
                                   </div>
 
@@ -1558,12 +1563,20 @@ export default function AdminPage() {
                   <label className="text-[11px] font-bold uppercase text-zinc-900">[ LANDING PAGE ]</label>
                   <select 
                     value={editLanding}
-                    onChange={(e) => setEditLanding(e.target.value)}
-                    disabled={editDestination === 'PRIVATE'}
-                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3 py-2.5 focus:outline-none font-mono font-bold rounded-md disabled:opacity-40"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditLanding(val);
+                      if (val === 'true') {
+                        setEditDestination('PUBLIC');
+                        setEditAssignedUser('');
+                      } else {
+                        setEditDestination('PRIVATE');
+                      }
+                    }}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3 py-2.5 focus:outline-none font-mono font-bold rounded-md"
                   >
-                    <option value="true">ON (VISIBLE)</option>
-                    <option value="false">OFF (HIDDEN)</option>
+                    <option value="true">ON (VISIBLE ON LANDING)</option>
+                    <option value="false">OFF (HIDDEN / PRIVATE)</option>
                   </select>
                 </div>
 
