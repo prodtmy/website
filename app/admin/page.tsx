@@ -219,12 +219,16 @@ export default function AdminPage() {
       else if (field === 'landing') updateData.is_landing = value === 'true';
       else if (field === 'assigned_user') updateData.assigned_user = value || null;
 
-      const { error } = await supabase
-        .from('tracks')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_track',
+          payload: { id, updateData }
+        })
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error);
       fetchData();
     } catch (err: any) {
       alert(`Fehler beim Aktualisieren: ${err.message}`);
@@ -295,24 +299,32 @@ export default function AdminPage() {
 
       const isVaultOnly = editDestination === 'PRIVATE';
 
-      const { error } = await supabase
-        .from('tracks')
-        .update({
-          title: editTitle,
-          track_type: editType,
-          bpm: parseInt(String(editBpm), 10),
-          key: editKey,
-          credits: editCredits,
-          is_vault_only: isVaultOnly,
-          is_landing: editLanding === 'true',
-          assigned_user: isVaultOnly ? (editAssignedUser || null) : null,
-          mp3_url: mp3Url,
-          wav_path: wavPath,
-          flp_path: flpPath,
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_track',
+          payload: {
+            id: editingTrack.id,
+            updateData: {
+              title: editTitle,
+              track_type: editType,
+              bpm: parseInt(String(editBpm), 10),
+              key: editKey,
+              credits: editCredits,
+              is_vault_only: isVaultOnly,
+              is_landing: editLanding === 'true',
+              assigned_user: isVaultOnly ? (editAssignedUser || null) : null,
+              mp3_url: mp3Url,
+              wav_path: wavPath,
+              flp_path: flpPath,
+            }
+          }
         })
-        .eq('id', editingTrack.id);
+      });
 
-      if (error) throw error;
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error);
 
       alert('Track erfolgreich aktualisiert!');
       setEditingTrack(null);
@@ -328,8 +340,13 @@ export default function AdminPage() {
   const handleDeleteTrack = async (id: string) => {
     if (!confirm('Diesen Track wirklich unwiderruflich löschen?')) return;
     try {
-      const { error } = await supabase.from('tracks').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_track', payload: { id } })
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error);
       fetchData();
     } catch (err: any) {
       alert(`Fehler beim Löschen: ${err.message}`);
@@ -487,17 +504,25 @@ export default function AdminPage() {
     setEditUserSaving(true);
 
     try {
-      const { error } = await supabase
-        .from('access_keys')
-        .update({
-          client_name: editUserName,
-          access_tier: editUserRole.toLowerCase(),
-          code: editUserKey,
-          is_active: editUserStatus,
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_user',
+          payload: {
+            id: editingUser.id,
+            updateData: {
+              client_name: editUserName,
+              access_tier: editUserRole.toLowerCase(),
+              code: editUserKey,
+              is_active: editUserStatus,
+            }
+          }
         })
-        .eq('id', editingUser.id);
+      });
 
-      if (error) throw error;
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error);
 
       alert('Benutzer erfolgreich aktualisiert!');
       setEditingUser(null);
@@ -511,11 +536,19 @@ export default function AdminPage() {
 
   const handleToggleUserStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('access_keys')
-        .update({ is_active: !currentStatus })
-        .eq('id', id);
-      if (error) throw error;
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_user',
+          payload: {
+            id,
+            updateData: { is_active: !currentStatus }
+          }
+        })
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error);
       fetchData();
     } catch (err: any) {
       alert(`Error toggling status: ${err.message}`);
@@ -525,18 +558,21 @@ export default function AdminPage() {
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const { error } = await supabase
-        .from('access_keys')
-        .insert([
-          {
-            code: newUserKey,
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_user',
+          payload: {
             client_name: newUserName,
             access_tier: newUserRole.toLowerCase(),
-            is_active: true
+            code: newUserKey,
           }
-        ]);
+        })
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error);
 
-      if (error) throw error;
       alert('Benutzer erfolgreich angelegt!');
       setNewUserName('');
       setNewUserKey('');
@@ -549,8 +585,13 @@ export default function AdminPage() {
   const handleDeleteUser = async (id: string) => {
     if (!confirm('Diesen Benutzer-Key dauerhaft löschen?')) return;
     try {
-      const { error } = await supabase.from('access_keys').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_user', payload: { id } })
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error);
       fetchData();
     } catch (err: any) {
       alert(`Fehler: ${err.message}`);

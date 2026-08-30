@@ -55,6 +55,14 @@ function VaultPageContent() {
     };
   }, []);
 
+function ensurePublicUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.includes('/storage/v1/object/') && !url.includes('/storage/v1/object/public/')) {
+    return url.replace('/storage/v1/object/', '/storage/v1/object/public/');
+  }
+  return url;
+}
+
   const togglePlay = (trackId: string, rawSrc: string | null) => {
     if (!audioObj) return;
 
@@ -62,7 +70,8 @@ function VaultPageContent() {
       audioObj.pause();
       setPlayingTrackId(null);
     } else {
-      if (!rawSrc) {
+      const sanitizedSrc = ensurePublicUrl(rawSrc);
+      if (!sanitizedSrc) {
         alert("Für diesen Track ist keine Audio-Datei für die Vorschau verfügbar.");
         return;
       }
@@ -84,7 +93,7 @@ function VaultPageContent() {
         });
       };
 
-      tryPlay(rawSrc);
+      tryPlay(sanitizedSrc);
     }
   };
 
@@ -106,12 +115,13 @@ function VaultPageContent() {
   };
 
   const triggerDownload = (url: string | null, defaultFilename: string) => {
-    if (!url) {
+    const sanitizedUrl = ensurePublicUrl(url);
+    if (!sanitizedUrl) {
       alert("Diese Datei steht für diesen Track nicht zur Verfügung.");
       return;
     }
     const link = document.createElement('a');
-    link.href = url;
+    link.href = sanitizedUrl;
     link.download = defaultFilename;
     link.target = '_blank';
     document.body.appendChild(link);
