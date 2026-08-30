@@ -54,6 +54,12 @@
       "namedRegex": "^/api/admin(?:/)?$"
     },
     {
+      "page": "/api/get-upload-url",
+      "regex": "^/api/get\\-upload\\-url(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/get\\-upload\\-url(?:/)?$"
+    },
+    {
       "page": "/api/upload-beat",
       "regex": "^/api/upload\\-beat(?:/)?$",
       "routeKeys": {},

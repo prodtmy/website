@@ -254,19 +254,27 @@ export default function AdminPage() {
   };
 
   const uploadFileViaApi = async (file: File, bucket: string, folder: string) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('bucket', bucket);
-    formData.append('folder', folder);
-
-    const res = await fetch('/api/upload-file', {
+    // 1. Get signed upload URL token from server (tiny JSON request to Vercel)
+    const res = await fetch('/api/get-upload-url', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bucket, filename: file.name, folder }),
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Upload failed');
-    return data.publicUrl as string;
+    const urlData = await res.json();
+    if (!res.ok) throw new Error(urlData.error || 'Upload URL generation failed');
+
+    // 2. Upload file directly from browser to Supabase Storage via signed token!
+    // Completely bypasses Vercel 4.5MB limit & Storage RLS policies!
+    const { error: uploadErr } = await supabase.storage
+      .from(bucket)
+      .uploadToSignedUrl(urlData.path, urlData.token, file);
+
+    if (uploadErr) {
+      throw new Error(`Direct upload failed: ${uploadErr.message}`);
+    }
+
+    return urlData.publicUrl as string;
   };
 
   const handleSaveTrackEdit = async (e: React.FormEvent) => {

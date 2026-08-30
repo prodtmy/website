@@ -3,6 +3,7 @@
   "/_not-found/page": "app/_not-found/page.js",
   "/admin/page": "app/admin/page.js",
   "/api/admin/route": "app/api/admin/route.js",
+  "/api/get-upload-url/route": "app/api/get-upload-url/route.js",
   "/api/upload-beat/route": "app/api/upload-beat/route.js",
   "/api/upload-file/route": "app/api/upload-file/route.js",
   "/page": "app/page.js",

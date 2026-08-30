@@ -3,6 +3,7 @@
   "/_not-found/page": "/_not-found",
   "/admin/page": "/admin",
   "/api/admin/route": "/api/admin",
+  "/api/get-upload-url/route": "/api/get-upload-url",
   "/api/upload-beat/route": "/api/upload-beat",
   "/api/upload-file/route": "/api/upload-file",
   "/page": "/",
