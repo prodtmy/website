@@ -28,7 +28,12 @@ export default function AdminPage() {
   const [editBpm, setEditBpm] = useState(140);
   const [editKey, setEditKey] = useState('F# MIN');
   const [editCredits, setEditCredits] = useState('PROD. TMY');
-  const [editFile, setEditFile] = useState<File | null>(null);
+  const [editDestination, setEditDestination] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
+  const [editLanding, setEditLanding] = useState('true');
+  const [editAssignedUser, setEditAssignedUser] = useState('');
+  const [editMp3File, setEditMp3File] = useState<File | null>(null);
+  const [editWavFile, setEditWavFile] = useState<File | null>(null);
+  const [editFlpFile, setEditFlpFile] = useState<File | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
   // Edit User Modal State
@@ -36,6 +41,7 @@ export default function AdminPage() {
   const [editUserName, setEditUserName] = useState('');
   const [editUserRole, setEditUserRole] = useState('ARTIST');
   const [editUserKey, setEditUserKey] = useState('');
+  const [editUserStatus, setEditUserStatus] = useState(true);
   const [editUserSaving, setEditUserSaving] = useState(false);
 
   // Tab 2: Upload Asset State
@@ -219,7 +225,12 @@ export default function AdminPage() {
     setEditBpm(track.bpm || 140);
     setEditKey(track.key || 'F# MIN');
     setEditCredits(track.credits || 'PROD. TMY');
-    setEditFile(null);
+    setEditDestination(track.is_vault_only ? 'PRIVATE' : 'PUBLIC');
+    setEditLanding(track.is_landing !== false ? 'true' : 'false');
+    setEditAssignedUser(track.assigned_user || '');
+    setEditMp3File(null);
+    setEditWavFile(null);
+    setEditFlpFile(null);
   };
 
   const handleSaveTrackEdit = async (e: React.FormEvent) => {
@@ -228,19 +239,47 @@ export default function AdminPage() {
     setEditSaving(true);
 
     try {
-      let mp3Url = editingTrack.mp3_url;
+      const timestamp = Date.now();
+      const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-      if (editFile) {
-        const timestamp = Date.now();
-        const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const mp3Path = `mp3/${timestamp}_${sanitize(editFile.name)}`;
+      let mp3Url = editingTrack.mp3_url;
+      let wavPath = editingTrack.wav_path;
+      let flpPath = editingTrack.flp_path;
+
+      // 1. Replace MP3 preview if selected
+      if (editMp3File) {
+        const mp3Path = `mp3/${timestamp}_${sanitize(editMp3File.name)}`;
         const { error: upErr } = await supabase.storage
           .from('previews')
-          .upload(mp3Path, editFile);
+          .upload(mp3Path, editMp3File);
         if (upErr) throw upErr;
         const { data: urlData } = supabase.storage.from('previews').getPublicUrl(mp3Path);
         mp3Url = urlData.publicUrl;
       }
+
+      // 2. Replace WAV if selected
+      if (editWavFile) {
+        const path = `wav/${timestamp}_${sanitize(editWavFile.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from('previews')
+          .upload(path, editWavFile);
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from('previews').getPublicUrl(path);
+        wavPath = urlData.publicUrl;
+      }
+
+      // 3. Replace FLP / Stems if selected
+      if (editFlpFile) {
+        const path = `stems/${timestamp}_${sanitize(editFlpFile.name)}`;
+        const { error: upErr } = await supabase.storage
+          .from('tracks')
+          .upload(path, editFlpFile);
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from('tracks').getPublicUrl(path);
+        flpPath = urlData.publicUrl;
+      }
+
+      const isVaultOnly = editDestination === 'PRIVATE';
 
       const { error } = await supabase
         .from('tracks')
@@ -250,7 +289,12 @@ export default function AdminPage() {
           bpm: parseInt(String(editBpm), 10),
           key: editKey,
           credits: editCredits,
+          is_vault_only: isVaultOnly,
+          is_landing: editLanding === 'true',
+          assigned_user: isVaultOnly ? (editAssignedUser || null) : null,
           mp3_url: mp3Url,
+          wav_path: wavPath,
+          flp_path: flpPath,
         })
         .eq('id', editingTrack.id);
 
@@ -260,7 +304,7 @@ export default function AdminPage() {
       setEditingTrack(null);
       fetchData();
     } catch (err: any) {
-      alert(`Fehler: ${err.message}`);
+      alert(`Fehler beim Speichern: ${err.message}`);
     } finally {
       setEditSaving(false);
     }
@@ -420,6 +464,7 @@ export default function AdminPage() {
     setEditUserName(user.client_name || '');
     setEditUserRole(user.access_tier?.toUpperCase() || 'ARTIST');
     setEditUserKey(user.code || '');
+    setEditUserStatus(user.is_active !== false);
   };
 
   const handleSaveUserEdit = async (e: React.FormEvent) => {
@@ -434,6 +479,7 @@ export default function AdminPage() {
           client_name: editUserName,
           access_tier: editUserRole.toLowerCase(),
           code: editUserKey,
+          is_active: editUserStatus,
         })
         .eq('id', editingUser.id);
 
@@ -443,7 +489,7 @@ export default function AdminPage() {
       setEditingUser(null);
       fetchData();
     } catch (err: any) {
-      alert(`Fehler: ${err.message}`);
+      alert(`Fehler beim Aktualisieren: ${err.message}`);
     } finally {
       setEditUserSaving(false);
     }
@@ -850,14 +896,49 @@ export default function AdminPage() {
                 </div>
 
                 {mp3File || wavFile || flpFile ? (
-                  <div className="w-full max-w-xl space-y-2 z-0">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">[ ATTACHED ASSETS ]</span>
+                  <div className="w-full max-w-xl space-y-2 z-20 relative pointer-events-auto">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">[ ATTACHED ASSETS ]</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setMp3File(null);
+                          setWavFile(null);
+                          setFlpFile(null);
+                          setDropzoneFile(null);
+                        }}
+                        className="text-[10px] font-mono text-zinc-400 hover:text-red-600 transition-colors uppercase underline"
+                      >
+                        [ CLEAR ALL ]
+                      </button>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-left">
                       {/* MP3 Pill */}
                       <div className={`p-3 rounded-lg border text-xs font-mono transition-all ${mp3File ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950' : 'border-dashed border-zinc-200 bg-zinc-50/50 text-zinc-400'}`}>
                         <div className="flex items-center justify-between font-bold text-[10px] uppercase">
                           <span>MP3 PREVIEW</span>
-                          {mp3File ? <span className="text-emerald-600 font-sans text-[9px] bg-emerald-100 px-1.5 py-0.5 rounded font-bold">READY</span> : <span>OPTIONAL</span>}
+                          {mp3File ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-emerald-600 font-sans text-[9px] bg-emerald-100 px-1.5 py-0.5 rounded font-bold">READY</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setMp3File(null);
+                                }}
+                                className="w-4 h-4 rounded-full bg-emerald-200 hover:bg-red-500 hover:text-white text-emerald-800 flex items-center justify-center text-[9px] transition-colors"
+                                title="Remove MP3"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <span>OPTIONAL</span>
+                          )}
                         </div>
                         <p className="truncate mt-1 text-[11px] font-semibold">{mp3File ? mp3File.name : 'Not selected'}</p>
                       </div>
@@ -866,7 +947,25 @@ export default function AdminPage() {
                       <div className={`p-3 rounded-lg border text-xs font-mono transition-all ${wavFile ? 'border-blue-200 bg-blue-50/70 text-blue-950' : 'border-dashed border-zinc-200 bg-zinc-50/50 text-zinc-400'}`}>
                         <div className="flex items-center justify-between font-bold text-[10px] uppercase">
                           <span>MASTER WAV</span>
-                          {wavFile ? <span className="text-blue-600 font-sans text-[9px] bg-blue-100 px-1.5 py-0.5 rounded font-bold">READY</span> : <span>OPTIONAL</span>}
+                          {wavFile ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-blue-600 font-sans text-[9px] bg-blue-100 px-1.5 py-0.5 rounded font-bold">READY</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setWavFile(null);
+                                }}
+                                className="w-4 h-4 rounded-full bg-blue-200 hover:bg-red-500 hover:text-white text-blue-800 flex items-center justify-center text-[9px] transition-colors"
+                                title="Remove WAV"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <span>OPTIONAL</span>
+                          )}
                         </div>
                         <p className="truncate mt-1 text-[11px] font-semibold">{wavFile ? wavFile.name : 'Not selected'}</p>
                       </div>
@@ -875,7 +974,25 @@ export default function AdminPage() {
                       <div className={`p-3 rounded-lg border text-xs font-mono transition-all ${flpFile ? 'border-purple-200 bg-purple-50/70 text-purple-950' : 'border-dashed border-zinc-200 bg-zinc-50/50 text-zinc-400'}`}>
                         <div className="flex items-center justify-between font-bold text-[10px] uppercase">
                           <span>STEMS / FLP</span>
-                          {flpFile ? <span className="text-purple-600 font-sans text-[9px] bg-purple-100 px-1.5 py-0.5 rounded font-bold">READY</span> : <span>OPTIONAL</span>}
+                          {flpFile ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-purple-600 font-sans text-[9px] bg-purple-100 px-1.5 py-0.5 rounded font-bold">READY</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setFlpFile(null);
+                                }}
+                                className="w-4 h-4 rounded-full bg-purple-200 hover:bg-red-500 hover:text-white text-purple-800 flex items-center justify-center text-[9px] transition-colors"
+                                title="Remove STEMS/FLP"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <span>OPTIONAL</span>
+                          )}
                         </div>
                         <p className="truncate mt-1 text-[11px] font-semibold">{flpFile ? flpFile.name : 'Not selected'}</p>
                       </div>
@@ -977,7 +1094,13 @@ export default function AdminPage() {
                     <label className="text-[11px] font-bold uppercase text-zinc-900">[ TARGET VAULT ]</label>
                     <select 
                       value={uploadDestination} 
-                      onChange={(e: any) => setUploadDestination(e.target.value)}
+                      onChange={(e: any) => {
+                        const val = e.target.value;
+                        setUploadDestination(val);
+                        if (val === 'PUBLIC') {
+                          setUploadAssignedUser('');
+                        }
+                      }}
                       className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono font-bold rounded-md transition-all"
                     >
                       <option value="PUBLIC">PUBLIC VAULT (All Authorized Users & Landing)</option>
@@ -1225,92 +1348,208 @@ export default function AdminPage() {
 
       {/* EDIT TRACK MODAL */}
       {editingTrack && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-md p-6 border border-[#E8E8ED] rounded-lg relative shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="bg-white w-full max-w-xl p-6 sm:p-7 border border-zinc-200 rounded-2xl relative shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <button 
               type="button"
               onClick={() => setEditingTrack(null)}
-              className="absolute top-4 right-4 text-[#86868B] hover:text-[#1D1D1F] transition-colors"
+              className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-900 transition-colors p-1"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#1D1D1F] mb-6">[ EDIT ASSET ]</h3>
+
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900">[ EDIT ASSET // RE-DEPLOY ]</h3>
+                <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded">ID: {editingTrack.id.slice(0, 8)}</span>
+              </div>
+            </div>
 
             <form onSubmit={handleSaveTrackEdit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ TITLE ]</label>
-                <input 
-                  type="text" 
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  required 
-                  className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none focus:border-primary font-mono uppercase" 
-                />
-              </div>
+              {/* Row 1: Title & Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ TITLE ]</label>
+                  <input 
+                    type="text" 
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    required 
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono uppercase rounded-md font-semibold" 
+                  />
+                </div>
 
-              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ TYPE ]</label>
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ TYPE ]</label>
                   <select 
                     value={editType}
                     onChange={(e) => setEditType(e.target.value)}
-                    className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono font-bold"
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono font-bold rounded-md"
                   >
                     <option value="BEAT">BEAT</option>
                     <option value="LOOP">LOOP</option>
                     <option value="IDEA">IDEA</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Row 2: BPM, Key, Credits */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ BPM ]</label>
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ BPM ]</label>
                   <input 
                     type="number" 
                     value={editBpm}
                     onChange={(e) => setEditBpm(Number(e.target.value))}
                     required 
-                    className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono" 
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono rounded-md font-semibold" 
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ KEY ]</label>
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ KEY ]</label>
                   <input 
                     type="text" 
                     value={editKey}
                     onChange={(e) => setEditKey(e.target.value)}
                     required 
-                    className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono uppercase" 
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono uppercase rounded-md font-semibold" 
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ CREDITS ]</label>
+                  <input 
+                    type="text" 
+                    value={editCredits}
+                    onChange={(e) => setEditCredits(e.target.value)}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono uppercase rounded-md font-semibold" 
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ CREDITS ]</label>
-                <input 
-                  type="text" 
-                  value={editCredits}
-                  onChange={(e) => setEditCredits(e.target.value)}
-                  className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono uppercase" 
-                />
+              {/* Row 3: Vault Target, Landing, Assign User */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-zinc-100">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ TARGET VAULT ]</label>
+                  <select 
+                    value={editDestination}
+                    onChange={(e: any) => {
+                      const val = e.target.value;
+                      setEditDestination(val);
+                      if (val === 'PUBLIC') setEditAssignedUser('');
+                    }}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3 py-2.5 focus:outline-none font-mono font-bold rounded-md"
+                  >
+                    <option value="PUBLIC">PUBLIC VAULT</option>
+                    <option value="PRIVATE">PRIVATE VAULT</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ LANDING PAGE ]</label>
+                  <select 
+                    value={editLanding}
+                    onChange={(e) => setEditLanding(e.target.value)}
+                    disabled={editDestination === 'PRIVATE'}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3 py-2.5 focus:outline-none font-mono font-bold rounded-md disabled:opacity-40"
+                  >
+                    <option value="true">ON (VISIBLE)</option>
+                    <option value="false">OFF (HIDDEN)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ ASSIGN USER ]</label>
+                  <select 
+                    value={editAssignedUser}
+                    onChange={(e) => setEditAssignedUser(e.target.value)}
+                    disabled={editDestination === 'PUBLIC'}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3 py-2.5 focus:outline-none font-mono font-bold rounded-md disabled:opacity-40"
+                  >
+                    <option value="">-- ALL / NONE --</option>
+                    {users.filter(u => u.is_active).map(u => (
+                      <option key={u.id} value={u.client_name}>
+                        {u.client_name} ({u.access_tier?.toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ AUDIO FILE (.WAV/.MP3) ]</label>
-                <input 
-                  type="file" 
-                  accept="audio/*" 
-                  onChange={(e) => setEditFile(e.target.files?.[0] || null)}
-                  className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs p-2 focus:outline-none font-mono" 
-                />
-                <p className="text-[10px] text-[#86868B]">Leave empty to keep current file.</p>
+              {/* Row 4: Replace 3 Audio Files */}
+              <div className="space-y-2 pt-3 border-t border-zinc-100">
+                <span className="text-[11px] font-bold uppercase text-zinc-900 block">[ REPLACE ASSET FILES ]</span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Replace MP3 */}
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase text-zinc-700">
+                      <span>PREVIEW MP3</span>
+                      {editingTrack.mp3_url ? <span className="text-emerald-600">✓ LINKED</span> : <span className="text-zinc-400">EMPTY</span>}
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="audio/*" 
+                      onChange={(e) => setEditMp3File(e.target.files?.[0] || null)}
+                      className="w-full text-[10px] text-zinc-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:bg-zinc-200 hover:file:bg-zinc-300 cursor-pointer" 
+                    />
+                    {editMp3File && <p className="text-[9px] text-emerald-700 truncate font-mono font-bold">New: {editMp3File.name}</p>}
+                  </div>
+
+                  {/* Replace WAV */}
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase text-zinc-700">
+                      <span>MASTER WAV</span>
+                      {editingTrack.wav_path ? <span className="text-blue-600">✓ LINKED</span> : <span className="text-zinc-400">EMPTY</span>}
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="audio/wav,audio/x-wav,.wav" 
+                      onChange={(e) => setEditWavFile(e.target.files?.[0] || null)}
+                      className="w-full text-[10px] text-zinc-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:bg-zinc-200 hover:file:bg-zinc-300 cursor-pointer" 
+                    />
+                    {editWavFile && <p className="text-[9px] text-blue-700 truncate font-mono font-bold">New: {editWavFile.name}</p>}
+                  </div>
+
+                  {/* Replace FLP / Stems */}
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase text-zinc-700">
+                      <span>STEMS / FLP</span>
+                      {editingTrack.flp_path ? <span className="text-purple-600">✓ LINKED</span> : <span className="text-zinc-400">EMPTY</span>}
+                    </div>
+                    <input 
+                      type="file" 
+                      accept=".flp,.zip,.rar" 
+                      onChange={(e) => setEditFlpFile(e.target.files?.[0] || null)}
+                      className="w-full text-[10px] text-zinc-600 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:bg-zinc-200 hover:file:bg-zinc-300 cursor-pointer" 
+                    />
+                    {editFlpFile && <p className="text-[9px] text-purple-700 truncate font-mono font-bold">New: {editFlpFile.name}</p>}
+                  </div>
+                </div>
               </div>
 
-              <button 
-                type="submit" 
-                disabled={editSaving}
-                className="w-full bg-[#1D1D1F] text-white text-xs font-bold py-3 mt-2 hover:bg-black transition-colors uppercase tracking-widest disabled:opacity-50"
-              >
-                {editSaving ? '[ SAVING CHANGES... ]' : '[ SAVE CHANGES ]'}
-              </button>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-3">
+                <button 
+                  type="button"
+                  onClick={() => setEditingTrack(null)}
+                  className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold py-3 rounded-lg transition-colors uppercase tracking-wider"
+                >
+                  [ CANCEL ]
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={editSaving}
+                  className="flex-1 bg-gradient-to-r from-zinc-900 to-black text-white hover:from-black hover:to-zinc-800 text-xs font-bold py-3 rounded-lg transition-all shadow-md hover:shadow-lg uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {editSaving ? (
+                    <span>[ SAVING CHANGES... ]</span>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                      <span>[ SAVE CHANGES ]</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -1318,61 +1557,97 @@ export default function AdminPage() {
 
       {/* EDIT USER MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-sm p-6 border border-[#E8E8ED] rounded-lg relative shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fadeIn">
+          <div className="bg-white w-full max-w-md p-6 sm:p-7 border border-zinc-200 rounded-2xl relative shadow-2xl space-y-5">
             <button 
               type="button"
               onClick={() => setEditingUser(null)}
-              className="absolute top-4 right-4 text-[#86868B] hover:text-[#1D1D1F] transition-colors"
+              className="absolute top-5 right-5 text-zinc-400 hover:text-zinc-900 transition-colors p-1"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#1D1D1F] mb-6">[ EDIT USER ]</h3>
+
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-900">[ EDIT USER CREDENTIALS ]</h3>
+                <span className="text-[9px] font-mono text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded">ID: {editingUser.id.slice(0, 8)}</span>
+              </div>
+            </div>
 
             <form onSubmit={handleSaveUserEdit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ CLIENT NAME ]</label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase text-zinc-900">[ CLIENT / USER NAME ]</label>
                 <input 
                   type="text" 
                   value={editUserName}
                   onChange={(e) => setEditUserName(e.target.value)}
                   required 
-                  className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono" 
+                  className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono font-semibold rounded-md transition-all" 
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ ROLE ]</label>
-                <select 
-                  value={editUserRole}
-                  onChange={(e) => setEditUserRole(e.target.value)}
-                  className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono font-bold"
-                >
-                  <option value="ARTIST">ARTIST</option>
-                  <option value="VIP">VIP</option>
-                  <option value="PRODUCER">PRODUCER</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ ROLE / CLEARANCE ]</label>
+                  <select 
+                    value={editUserRole}
+                    onChange={(e) => setEditUserRole(e.target.value)}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono font-bold rounded-md transition-all"
+                  >
+                    <option value="ARTIST">ARTIST (Private Vault)</option>
+                    <option value="VIP">VIP (Collab Access)</option>
+                    <option value="PRODUCER">PRODUCER (Upload Access)</option>
+                    <option value="ADMIN">ADMIN (Full Governance)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase text-zinc-900">[ STATUS ]</label>
+                  <select 
+                    value={editUserStatus ? 'true' : 'false'}
+                    onChange={(e) => setEditUserStatus(e.target.value === 'true')}
+                    className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono font-bold rounded-md transition-all"
+                  >
+                    <option value="true">ACTIVE (ENABLED)</option>
+                    <option value="false">INACTIVE (REVOKED)</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-[#1D1D1F]">[ ACCESS KEY ]</label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold uppercase text-zinc-900">[ ACCESS KEY ]</label>
                 <input 
                   type="text" 
                   value={editUserKey}
                   onChange={(e) => setEditUserKey(e.target.value)}
                   required 
-                  className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono uppercase" 
+                  className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono uppercase font-semibold rounded-md transition-all" 
                 />
               </div>
 
-              <button 
-                type="submit" 
-                disabled={editUserSaving}
-                className="w-full bg-[#1D1D1F] text-white text-xs font-bold py-3 mt-2 hover:bg-black transition-colors uppercase tracking-widest disabled:opacity-50"
-              >
-                {editUserSaving ? '[ UPDATING USER... ]' : '[ UPDATE USER ]'}
-              </button>
+              <div className="flex items-center gap-3 pt-3">
+                <button 
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-bold py-3 rounded-lg transition-colors uppercase tracking-wider"
+                >
+                  [ CANCEL ]
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={editUserSaving}
+                  className="flex-1 bg-gradient-to-r from-zinc-900 to-black text-white hover:from-black hover:to-zinc-800 text-xs font-bold py-3 rounded-lg transition-all shadow-md hover:shadow-lg uppercase tracking-widest disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {editUserSaving ? (
+                    <span>[ UPDATING... ]</span>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                      <span>[ UPDATE USER ]</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>

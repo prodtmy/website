@@ -24,17 +24,32 @@ function VaultPageContent() {
   // Accordion open states
   const [openAccordions, setOpenAccordions] = useState<Record<string, boolean>>({});
 
-  // Audio Playback
+  // Audio Playback & Scrubber Engine
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [audioObj, setAudioObj] = useState<HTMLAudioElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   useEffect(() => {
     const audio = new Audio();
-    audio.onended = () => setPlayingTrackId(null);
-    audio.onpause = () => setPlayingTrackId(null);
+    
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleLoadedMetadata = () => setDuration(audio.duration || 0);
+    const handleEnded = () => setPlayingTrackId(null);
+    const handlePause = () => setPlayingTrackId(null);
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('pause', handlePause);
+
     setAudioObj(audio);
 
     return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('pause', handlePause);
       audio.pause();
       audio.src = '';
     };
@@ -48,6 +63,8 @@ function VaultPageContent() {
       setPlayingTrackId(null);
     } else {
       audioObj.src = src;
+      setCurrentTime(0);
+      setDuration(0);
       audioObj.play().then(() => {
         setPlayingTrackId(trackId);
       }).catch(err => {
@@ -55,6 +72,37 @@ function VaultPageContent() {
         alert("Audio konnte nicht abgespielt werden.");
       });
     }
+  };
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioObj || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const newTime = (clickX / width) * duration;
+    audioObj.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
+  const formatTime = (secs: number) => {
+    if (!secs || isNaN(secs)) return '0:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const triggerDownload = (url: string | null, defaultFilename: string) => {
+    if (!url) {
+      alert("Diese Datei steht für diesen Track nicht zur Verfügung.");
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = defaultFilename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleLogout = () => {
@@ -144,12 +192,15 @@ function VaultPageContent() {
     }));
   };
 
-  const handleDownload = (type: string, trackTitle: string) => {
-    alert(`DOWNLOAD STARTED: ${trackTitle} (${type})`);
-  };
-
   if (loading) {
-    return <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center font-mono text-sm">[ INITIALIZING SECURE CONNECTION... ]</div>;
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center font-mono text-xs">
+        <div className="flex items-center gap-2 text-zinc-600">
+          <span className="w-2 h-2 rounded-full bg-zinc-900 animate-ping"></span>
+          <span>[ INITIALIZING SECURE VAULT CONNECTION... ]</span>
+        </div>
+      </div>
+    );
   }
 
   // STATE A: UNAUTHORIZED
@@ -254,7 +305,7 @@ function VaultPageContent() {
     }
   });
 
-  // STATE B: AUTHORIZED (Original Accordion Layout from vault.html)
+  // STATE B: AUTHORIZED (Upgraded Pro Studio Vault Layout)
   return (
     <div className="min-h-screen bg-[#F5F5F7] font-mono text-[#1D1D1F] flex flex-col antialiased">
       {/* Top Header */}
@@ -310,10 +361,10 @@ function VaultPageContent() {
           )}
         </div>
 
-        {/* Accordion Tracklist List Container */}
-        <div className="flex flex-col divide-y divide-[#E8E8ED]">
+        {/* Tracklist List Container */}
+        <div className="flex flex-col gap-3">
           {displayedTracks.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-[#E8E8ED] text-[#86868B] text-xs uppercase tracking-widest">
+            <div className="p-12 text-center border border-dashed border-[#E8E8ED] bg-white rounded-xl text-[#86868B] text-xs uppercase tracking-widest">
               NO EXCLUSIVE TRACKS CURRENTLY ASSIGNED TO YOUR SECTOR.
             </div>
           ) : (
@@ -323,86 +374,190 @@ function VaultPageContent() {
               const trackDate = track.created_at ? new Date(track.created_at).toISOString().split('T')[0] : '2026-08';
 
               return (
-                <div key={track.id} className="border-b border-[#E8E8ED] py-4 flex flex-col transition-colors">
+                <div 
+                  key={track.id} 
+                  className={`bg-white rounded-xl border transition-all duration-200 shadow-sm overflow-hidden ${
+                    isPlaying ? 'border-zinc-900 shadow-md ring-1 ring-zinc-900/10' : 'border-[#E8E8ED] hover:border-zinc-400'
+                  }`}
+                >
                   <div 
                     onClick={() => toggleAccordion(track.id)}
-                    className="flex items-center justify-between gap-4 cursor-pointer select-none group"
+                    className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer select-none group"
                   >
                     <div className="flex items-center gap-4 flex-1 min-w-0">
+                      {/* Play/Pause Button */}
                       <button 
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           togglePlay(track.id, track.mp3_url);
                         }}
-                        className="w-9 h-9 rounded-full border border-[#E8E8ED] flex items-center justify-center text-[#1D1D1F] hover:bg-black/5 transition-all flex-shrink-0"
+                        className={`w-11 h-11 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
+                          isPlaying 
+                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-md scale-105' 
+                            : 'border-zinc-300 text-zinc-900 hover:bg-zinc-900 hover:text-white hover:border-zinc-900'
+                        }`}
                       >
                         {isPlaying ? (
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                         ) : (
-                          <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                          <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         )}
                       </button>
 
-                      <div className="flex flex-col truncate">
-                        <span className="font-bold text-sm text-[#1D1D1F] tracking-wide group-hover:underline truncate">
-                          {track.title}
-                        </span>
-                        <span className="text-xs text-[#86868B]">
-                          {track.bpm || '---'} BPM // {track.key || '---'}{' '}
-                          <span className="border border-[#E8E8ED] px-1 rounded ml-1 text-[9px] uppercase font-bold">
+                      {/* Track Details & Scrubber */}
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-base text-[#1D1D1F] tracking-wide group-hover:underline truncate">
+                            {track.title}
+                          </span>
+                          <span className="border border-zinc-300 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold text-zinc-700 bg-zinc-50">
                             {track.track_type || 'BEAT'}
                           </span>
-                        </span>
+                        </div>
+                        
+                        <div className="text-xs text-[#86868B] mt-0.5 flex items-center gap-2">
+                          <span>{track.bpm || '---'} BPM</span>
+                          <span>//</span>
+                          <span>{track.key || '---'}</span>
+                          <span>//</span>
+                          <span className="text-zinc-500 font-medium">{track.credits || 'PROD. TMY'}</span>
+                        </div>
+
+                        {/* Interactive Scrubber / Progress Bar (When Playing) */}
+                        {isPlaying && (
+                          <div 
+                            className="mt-3 flex items-center gap-3 w-full pr-2 animate-fadeIn"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="text-[10px] font-mono text-zinc-900 font-bold min-w-[32px]">
+                              {formatTime(currentTime)}
+                            </span>
+                            
+                            <div 
+                              className="flex-1 h-2.5 bg-zinc-200 rounded-full cursor-pointer relative overflow-hidden group/scrubber shadow-inner"
+                              onClick={handleSeek}
+                            >
+                              <div 
+                                className="h-full bg-gradient-to-r from-zinc-800 to-black rounded-full transition-all duration-75 relative" 
+                                style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                              >
+                                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-2 border-black rounded-full shadow-md"></span>
+                              </div>
+                            </div>
+
+                            <span className="text-[10px] font-mono text-zinc-400 min-w-[32px]">
+                              {formatTime(duration)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="hidden md:block text-xs text-[#86868B] font-mono">
-                      {trackDate}
-                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100">
+                      <div className="text-xs text-[#86868B] font-mono">
+                        {trackDate}
+                      </div>
 
-                    <div className="flex items-center gap-3">
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload('PREVIEW', track.title);
-                        }}
-                        className="text-xs border border-[#E8E8ED] px-2.5 py-1.5 hover:bg-black/5 transition-colors uppercase font-medium hidden sm:flex items-center gap-1.5"
-                      >
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                        <span>PREVIEW</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerDownload(track.mp3_url, `${track.title}_PREVIEW.mp3`);
+                          }}
+                          className="text-xs bg-zinc-100 hover:bg-zinc-900 hover:text-white border border-zinc-200 px-3 py-1.5 rounded transition-all uppercase font-medium flex items-center gap-1.5"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                          <span>PREVIEW</span>
+                        </button>
 
-                      <span className="text-xs text-[#86868B] group-hover:text-[#1D1D1F] transition-transform duration-200">
-                        {isOpen ? '[ − ]' : '[ + ]'}
-                      </span>
+                        <span className="text-xs font-mono font-bold text-zinc-400 group-hover:text-[#1D1D1F] transition-transform duration-200 px-1">
+                          {isOpen ? '[ − ]' : '[ + ]'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Accordion Content */}
+                  {/* Accordion Content: 3 Download Options */}
                   {isOpen && (
-                    <div className="pt-4 space-y-3">
+                    <div className="p-4 sm:p-5 bg-zinc-50/80 border-t border-[#E8E8ED] space-y-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">[ ASSET DOWNLOAD MATRIX ]</span>
+                      
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <button 
-                          onClick={() => handleDownload('STEMS (WAV-ZIP)', track.title)}
-                          className="p-3 bg-[#F5F5F7] hover:bg-black/5 border border-[#E8E8ED] rounded text-left flex flex-col justify-between gap-2 transition-all group"
+                        {/* 1. Preview MP3 */}
+                        <div 
+                          onClick={() => triggerDownload(track.mp3_url, `${track.title}_PREVIEW.mp3`)}
+                          className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer group ${
+                            track.mp3_url 
+                              ? 'bg-white hover:border-emerald-500 border-zinc-200 shadow-sm hover:shadow-md' 
+                              : 'bg-zinc-100/60 border-zinc-200/60 opacity-50 cursor-not-allowed'
+                          }`}
                         >
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D1D1F]">[ STEMS (WAV-ZIP) ]</span>
-                          <span className="text-[10px] text-[#86868B]">24-Bit Dry & Wet Stems</span>
-                        </button>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D1D1F] flex items-center gap-1.5">
+                              <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                              <span>PREVIEW MP3</span>
+                            </span>
+                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${track.mp3_url ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-200 text-zinc-500'}`}>
+                              {track.mp3_url ? 'AVAILABLE' : 'N/A'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[#86868B]">320kbps Audio Preview Stream</p>
+                          <div className="text-[10px] font-bold text-emerald-700 group-hover:underline flex items-center gap-1">
+                            <span>DOWNLOAD MP3</span>
+                            <span>→</span>
+                          </div>
+                        </div>
 
-                        <button 
-                          onClick={() => handleDownload('PROJECT (.FLP)', track.title)}
-                          className="p-3 bg-[#F5F5F7] hover:bg-black/5 border border-[#E8E8ED] rounded text-left flex flex-col justify-between gap-2 transition-all group"
+                        {/* 2. Master WAV */}
+                        <div 
+                          onClick={() => triggerDownload(track.wav_path, `${track.title}_MASTER.wav`)}
+                          className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer group ${
+                            track.wav_path 
+                              ? 'bg-white hover:border-blue-500 border-zinc-200 shadow-sm hover:shadow-md' 
+                              : 'bg-zinc-100/60 border-zinc-200/60 opacity-50 cursor-not-allowed'
+                          }`}
                         >
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D1D1F]">[ PROJECT (.FLP) ]</span>
-                          <span className="text-[10px] text-[#86868B]">FL Studio Project File</span>
-                        </button>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D1D1F] flex items-center gap-1.5">
+                              <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+                              <span>MASTER WAV</span>
+                            </span>
+                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${track.wav_path ? 'bg-blue-100 text-blue-700' : 'bg-zinc-200 text-zinc-500'}`}>
+                              {track.wav_path ? 'AVAILABLE' : 'N/A'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[#86868B]">24-Bit Studio Master WAV</p>
+                          <div className="text-[10px] font-bold text-blue-700 group-hover:underline flex items-center gap-1">
+                            <span>DOWNLOAD WAV</span>
+                            <span>→</span>
+                          </div>
+                        </div>
 
-                        <div className="p-3 bg-[#F5F5F7]/50 border border-[#E8E8ED] rounded text-left flex flex-col justify-between gap-1">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#86868B]">[ CREDITS ]</span>
-                          <span className="text-[10px] text-[#1D1D1F] truncate font-medium">{track.credits || 'PROD. TMY'}</span>
+                        {/* 3. STEMS / FLP Archive */}
+                        <div 
+                          onClick={() => triggerDownload(track.flp_path, `${track.title}_STEMS_PROJECT.zip`)}
+                          className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer group ${
+                            track.flp_path 
+                              ? 'bg-white hover:border-purple-500 border-zinc-200 shadow-sm hover:shadow-md' 
+                              : 'bg-zinc-100/60 border-zinc-200/60 opacity-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D1D1F] flex items-center gap-1.5">
+                              <svg className="w-3.5 h-3.5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 01-2-2V5a2 2 0 012-2h14a2 2 0 012 2v1H5zm0 0v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                              <span>STEMS / FLP</span>
+                            </span>
+                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${track.flp_path ? 'bg-purple-100 text-purple-700' : 'bg-zinc-200 text-zinc-500'}`}>
+                              {track.flp_path ? 'AVAILABLE' : 'N/A'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[#86868B]">Track Stems (.ZIP) & FL Studio Project</p>
+                          <div className="text-[10px] font-bold text-purple-700 group-hover:underline flex items-center gap-1">
+                            <span>DOWNLOAD STEMS / FLP</span>
+                            <span>→</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -425,7 +580,7 @@ function VaultPageContent() {
 
 export default function VaultPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center font-mono text-sm">[ LOADING VAULT... ]</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center font-mono text-xs">[ LOADING VAULT... ]</div>}>
       <VaultPageContent />
     </Suspense>
   );
