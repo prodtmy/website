@@ -4,6 +4,7 @@
   "/admin/page": "/admin",
   "/api/admin/route": "/api/admin",
   "/api/upload-beat/route": "/api/upload-beat",
+  "/api/upload-file/route": "/api/upload-file",
   "/page": "/",
   "/vault/page": "/vault"
 }

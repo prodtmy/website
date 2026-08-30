@@ -251,50 +251,45 @@ export default function AdminPage() {
     setEditFlpFile(null);
   };
 
+  const uploadFileViaApi = async (file: File, bucket: string, folder: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('bucket', bucket);
+    formData.append('folder', folder);
+
+    const res = await fetch('/api/upload-file', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+    return data.publicUrl as string;
+  };
+
   const handleSaveTrackEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTrack) return;
     setEditSaving(true);
 
     try {
-      const timestamp = Date.now();
-      const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9._-]/g, '_');
-
       let mp3Url = editingTrack.mp3_url;
       let wavPath = editingTrack.wav_path;
       let flpPath = editingTrack.flp_path;
 
-      // 1. Replace MP3 preview if selected
+      // 1. Replace MP3 preview if selected (via Server API)
       if (editMp3File) {
-        const mp3Path = `mp3/${timestamp}_${sanitize(editMp3File.name)}`;
-        const { error: upErr } = await supabase.storage
-          .from('previews')
-          .upload(mp3Path, editMp3File);
-        if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from('previews').getPublicUrl(mp3Path);
-        mp3Url = urlData.publicUrl;
+        mp3Url = await uploadFileViaApi(editMp3File, 'previews', 'mp3');
       }
 
-      // 2. Replace WAV if selected
+      // 2. Replace WAV if selected (via Server API)
       if (editWavFile) {
-        const path = `wav/${timestamp}_${sanitize(editWavFile.name)}`;
-        const { error: upErr } = await supabase.storage
-          .from('previews')
-          .upload(path, editWavFile);
-        if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from('previews').getPublicUrl(path);
-        wavPath = urlData.publicUrl;
+        wavPath = await uploadFileViaApi(editWavFile, 'previews', 'wav');
       }
 
-      // 3. Replace FLP / Stems if selected
+      // 3. Replace FLP / Stems if selected (via Server API)
       if (editFlpFile) {
-        const path = `stems/${timestamp}_${sanitize(editFlpFile.name)}`;
-        const { error: upErr } = await supabase.storage
-          .from('tracks')
-          .upload(path, editFlpFile);
-        if (upErr) throw upErr;
-        const { data: urlData } = supabase.storage.from('tracks').getPublicUrl(path);
-        flpPath = urlData.publicUrl;
+        flpPath = await uploadFileViaApi(editFlpFile, 'tracks', 'stems');
       }
 
       const isVaultOnly = editDestination === 'PRIVATE';
@@ -405,39 +400,21 @@ export default function AdminPage() {
       let uploadedWavUrl: string | null = null;
       let uploadedFlpUrl: string | null = null;
 
-      // 1. Upload MP3 if provided (previews bucket)
+      // 1. Upload MP3 if provided (previews bucket via Server API)
       if (mp3File) {
-        const mp3Path = `mp3/${timestamp}_${sanitize(mp3File.name)}`;
-        const { error: mp3Err } = await supabase.storage
-          .from('previews')
-          .upload(mp3Path, mp3File);
-        if (mp3Err) throw new Error(`MP3 Upload fehlgeschlagen: ${mp3Err.message}`);
-        const { data } = supabase.storage.from('previews').getPublicUrl(mp3Path);
-        uploadedMp3Url = data.publicUrl;
+        uploadedMp3Url = await uploadFileViaApi(mp3File, 'previews', 'mp3');
       }
       setUploadProgress(40);
 
-      // 2. Upload WAV if provided (previews bucket for public preview access)
+      // 2. Upload WAV if provided (previews bucket via Server API)
       if (wavFile) {
-        const wavPath = `wav/${timestamp}_${sanitize(wavFile.name)}`;
-        const { error: wavErr } = await supabase.storage
-          .from('previews')
-          .upload(wavPath, wavFile);
-        if (wavErr) throw new Error(`WAV Upload fehlgeschlagen: ${wavErr.message}`);
-        const { data } = supabase.storage.from('previews').getPublicUrl(wavPath);
-        uploadedWavUrl = data.publicUrl;
+        uploadedWavUrl = await uploadFileViaApi(wavFile, 'previews', 'wav');
       }
       setUploadProgress(70);
 
-      // 3. Upload FLP / Stems if provided (tracks bucket)
+      // 3. Upload FLP / Stems if provided (tracks bucket via Server API)
       if (flpFile) {
-        const flpPath = `stems/${timestamp}_${sanitize(flpFile.name)}`;
-        const { error: flpErr } = await supabase.storage
-          .from('tracks')
-          .upload(flpPath, flpFile);
-        if (flpErr) throw new Error(`FLP/Stems Upload fehlgeschlagen: ${flpErr.message}`);
-        const { data } = supabase.storage.from('tracks').getPublicUrl(flpPath);
-        uploadedFlpUrl = data.publicUrl;
+        uploadedFlpUrl = await uploadFileViaApi(flpFile, 'tracks', 'stems');
       }
       setUploadProgress(90);
 

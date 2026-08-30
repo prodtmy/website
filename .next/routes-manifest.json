@@ -60,6 +60,12 @@
       "namedRegex": "^/api/upload\\-beat(?:/)?$"
     },
     {
+      "page": "/api/upload-file",
+      "regex": "^/api/upload\\-file(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/upload\\-file(?:/)?$"
+    },
+    {
       "page": "/vault",
       "regex": "^/vault(?:/)?$",
       "routeKeys": {},
