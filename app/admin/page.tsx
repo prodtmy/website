@@ -278,12 +278,46 @@ export default function AdminPage() {
     }
   };
 
+  const processSelectedFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    let newMp3: File | null = null;
+    let newWav: File | null = null;
+    let newFlp: File | null = null;
+
+    fileArray.forEach(file => {
+      const ext = file.name.toLowerCase().split('.').pop() || '';
+      if (['mp3', 'm4a', 'aac', 'ogg'].includes(ext)) {
+        newMp3 = file;
+      } else if (['wav', 'flac', 'aiff', 'aif'].includes(ext)) {
+        newWav = file;
+      } else if (['zip', 'rar', 'flp', '7z'].includes(ext)) {
+        newFlp = file;
+      } else {
+        if (!newMp3) newMp3 = file;
+      }
+    });
+
+    if (newMp3) setMp3File(newMp3);
+    if (newWav) setWavFile(newWav);
+    if (newFlp) setFlpFile(newFlp);
+    setDropzoneFile(fileArray[0]);
+
+    const primaryAudio = newMp3 || newWav || fileArray[0];
+    if (primaryAudio && !uploadTitle) {
+      const baseName = primaryAudio.name.replace(/\.[^/.]+$/, "");
+      setUploadTitle(baseName.toUpperCase().replace(/[^A-Z0-9_-]/g, '_'));
+    }
+  };
+
   // Asset Upload
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const activeMp3 = mp3File || dropzoneFile;
-    if (!activeMp3) {
-      alert('Bitte mindestens eine Audio-/Preview-Datei auswählen.');
+
+    // Minimum requirement: At least MP3 or WAV audio file
+    if (!mp3File && !wavFile) {
+      alert('Bitte mindestens eine Audio-Datei (MP3 oder WAV) auswählen.');
       return;
     }
 
@@ -292,44 +326,48 @@ export default function AdminPage() {
       const timestamp = Date.now();
       const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-      // 1. MP3 in previews bucket
-      const mp3Path = `mp3/${timestamp}_${sanitize(activeMp3.name)}`;
-      const { error: mp3Err } = await supabase.storage
-        .from('previews')
-        .upload(mp3Path, activeMp3);
+      let uploadedMp3Url: string | null = null;
+      let uploadedWavUrl: string | null = null;
+      let uploadedFlpUrl: string | null = null;
 
-      if (mp3Err) throw new Error(`MP3 Upload fehlgeschlagen: ${mp3Err.message}`);
+      // 1. Upload MP3 if provided (previews bucket)
+      if (mp3File) {
+        const mp3Path = `mp3/${timestamp}_${sanitize(mp3File.name)}`;
+        const { error: mp3Err } = await supabase.storage
+          .from('previews')
+          .upload(mp3Path, mp3File);
+        if (mp3Err) throw new Error(`MP3 Upload fehlgeschlagen: ${mp3Err.message}`);
+        const { data } = supabase.storage.from('previews').getPublicUrl(mp3Path);
+        uploadedMp3Url = data.publicUrl;
+      }
       setUploadProgress(40);
 
-      // 2. WAV in tracks bucket
-      let wavPath = null;
+      // 2. Upload WAV if provided (previews bucket for public preview access)
       if (wavFile) {
-        wavPath = `wav/${timestamp}_${sanitize(wavFile.name)}`;
+        const wavPath = `wav/${timestamp}_${sanitize(wavFile.name)}`;
         const { error: wavErr } = await supabase.storage
-          .from('tracks')
+          .from('previews')
           .upload(wavPath, wavFile);
         if (wavErr) throw new Error(`WAV Upload fehlgeschlagen: ${wavErr.message}`);
+        const { data } = supabase.storage.from('previews').getPublicUrl(wavPath);
+        uploadedWavUrl = data.publicUrl;
       }
       setUploadProgress(70);
 
-      // 3. FLP/Stems in tracks bucket
-      let flpPath = null;
+      // 3. Upload FLP / Stems if provided (tracks bucket)
       if (flpFile) {
-        flpPath = `stems/${timestamp}_${sanitize(flpFile.name)}`;
+        const flpPath = `stems/${timestamp}_${sanitize(flpFile.name)}`;
         const { error: flpErr } = await supabase.storage
           .from('tracks')
           .upload(flpPath, flpFile);
-        if (flpErr) throw new Error(`FLP Upload fehlgeschlagen: ${flpErr.message}`);
+        if (flpErr) throw new Error(`FLP/Stems Upload fehlgeschlagen: ${flpErr.message}`);
+        const { data } = supabase.storage.from('tracks').getPublicUrl(flpPath);
+        uploadedFlpUrl = data.publicUrl;
       }
       setUploadProgress(90);
 
-      const { data: mp3UrlData } = supabase.storage.from('previews').getPublicUrl(mp3Path);
-      const { data: wavUrlData } = wavPath
-        ? supabase.storage.from('tracks').getPublicUrl(wavPath)
-        : { data: { publicUrl: null } };
-      const { data: flpUrlData } = flpPath
-        ? supabase.storage.from('tracks').getPublicUrl(flpPath)
-        : { data: { publicUrl: null } };
+      // Fallback: If no MP3 was uploaded, use the WAV URL as the preview audio
+      const finalPreviewUrl = uploadedMp3Url || uploadedWavUrl;
 
       const isVaultOnly = uploadDestination === 'PRIVATE';
 
@@ -344,9 +382,9 @@ export default function AdminPage() {
           isVaultOnly: isVaultOnly,
           assignedUser: isVaultOnly ? uploadAssignedUser : null,
           accessTier: isVaultOnly ? 'artist' : 'standard',
-          mp3Url: mp3UrlData.publicUrl,
-          wavPath: wavUrlData?.publicUrl || null,
-          flpPath: flpUrlData?.publicUrl || null,
+          mp3Url: finalPreviewUrl,
+          wavPath: uploadedWavUrl || null,
+          flpPath: uploadedFlpUrl || null,
         }),
       });
 
@@ -369,11 +407,9 @@ export default function AdminPage() {
       setDropzoneFile(null);
       setFileInputKey(Date.now());
       setUploadProgress(null);
-      setActiveTab('vault');
       fetchData();
     } catch (err: any) {
-      console.error(err);
-      alert(`Upload Fehler: ${err.message}`);
+      alert(`Upload-Fehler: ${err.message}`);
       setUploadProgress(null);
     }
   };
@@ -781,35 +817,44 @@ export default function AdminPage() {
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
-                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                    setDropzoneFile(e.dataTransfer.files[0]);
-                    setMp3File(e.dataTransfer.files[0]);
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    processSelectedFiles(e.dataTransfer.files);
                   }
                 }}
               >
                 <input 
                   type="file" 
-                  accept="audio/*,.zip,.rar,.flp,.mp4"
+                  multiple
+                  accept="audio/*,.wav,.zip,.rar,.flp,.mp4"
                   onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setDropzoneFile(e.target.files[0]);
-                      setMp3File(e.target.files[0]);
+                    if (e.target.files && e.target.files.length > 0) {
+                      processSelectedFiles(e.target.files);
                     }
                   }}
                   className="absolute inset-0 opacity-0 cursor-pointer" 
                 />
                 <svg className="w-8 h-8 text-[#86868B] group-hover:text-[#1D1D1F] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#1D1D1F]">
-                  {dropzoneFile ? `SELECTED: ${dropzoneFile.name}` : 'DRAG & DROP AUDIO (WAV/MP3), ZIP, FLP OR MP4 HERE'}
-                </span>
-                <span className="text-[10px] text-[#86868B]">OR CLICK TO BROWSE LOCAL FILES</span>
+                
+                <div className="text-xs font-bold uppercase tracking-wider text-[#1D1D1F]">
+                  {mp3File || wavFile || flpFile ? (
+                    <div className="flex flex-col gap-1 items-center">
+                      <span className="underline">[ SELECTED FILES ]</span>
+                      {mp3File && <span className="text-emerald-600 font-mono">✓ MP3 PREVIEW: {mp3File.name}</span>}
+                      {wavFile && <span className="text-blue-600 font-mono">✓ MASTER WAV: {wavFile.name}</span>}
+                      {flpFile && <span className="text-purple-600 font-mono">✓ STEMS / FLP: {flpFile.name}</span>}
+                    </div>
+                  ) : (
+                    <span>DRAG & DROP FILES HERE (MP3, WAV, ZIP/FLP) OR CLICK TO BROWSE</span>
+                  )}
+                </div>
+                <span className="text-[10px] text-[#86868B]">MINIMUM REQUIREMENT: MP3 OR WAV FILE (WAV WILL BE USED AS PREVIEW IF NO MP3 IS PROVIDED)</span>
               </div>
 
               {/* Upload Progress Bar */}
               {uploadProgress !== null && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] font-mono text-[#1D1D1F] font-bold">
-                    <span>TRANSMITTING ASSET TO VAULT...</span>
+                    <span>TRANSMITTING ASSETS TO VAULT...</span>
                     <span>{uploadProgress}%</span>
                   </div>
                   <div className="w-full h-2 bg-[#E8E8ED] rounded-full overflow-hidden">
@@ -903,31 +948,43 @@ export default function AdminPage() {
                 {/* Additional Optional Asset Files */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E8E8ED]">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-[#86868B]">[ PREVIEW AUDIO (MP3) ]</label>
+                    <label className="text-[10px] font-bold uppercase text-[#86868B] flex items-center justify-between">
+                      <span>[ PREVIEW AUDIO (MP3) ]</span>
+                      {mp3File && <span className="text-emerald-600 text-[9px] font-bold">✓ READY</span>}
+                    </label>
                     <input 
                       type="file" 
                       accept="audio/*" 
                       onChange={(e) => setMp3File(e.target.files?.[0] || null)}
                       className="w-full text-xs" 
                     />
+                    {mp3File && <p className="text-[10px] text-emerald-700 truncate font-mono">{mp3File.name}</p>}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-[#86868B]">[ MASTER WAV ]</label>
+                    <label className="text-[10px] font-bold uppercase text-[#86868B] flex items-center justify-between">
+                      <span>[ MASTER WAV ]</span>
+                      {wavFile && <span className="text-blue-600 text-[9px] font-bold">✓ READY</span>}
+                    </label>
                     <input 
                       type="file" 
                       accept="audio/wav,audio/x-wav,.wav" 
                       onChange={(e) => setWavFile(e.target.files?.[0] || null)}
                       className="w-full text-xs" 
                     />
+                    {wavFile && <p className="text-[10px] text-blue-700 truncate font-mono">{wavFile.name}</p>}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase text-[#86868B]">[ STEMS / FLP ARCHIVE ]</label>
+                    <label className="text-[10px] font-bold uppercase text-[#86868B] flex items-center justify-between">
+                      <span>[ STEMS / FLP ARCHIVE ]</span>
+                      {flpFile && <span className="text-purple-600 text-[9px] font-bold">✓ READY</span>}
+                    </label>
                     <input 
                       type="file" 
                       accept=".flp,.zip,.rar" 
                       onChange={(e) => setFlpFile(e.target.files?.[0] || null)}
                       className="w-full text-xs" 
                     />
+                    {flpFile && <p className="text-[10px] text-purple-700 truncate font-mono">{flpFile.name}</p>}
                   </div>
                 </div>
 
