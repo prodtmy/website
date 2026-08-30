@@ -487,9 +487,6 @@ export default function AdminPage() {
       }
       setUploadProgress(90);
 
-      // Fallback: If no MP3 was uploaded, use the WAV URL as the preview audio
-      const finalPreviewUrl = uploadedMp3Url || uploadedWavUrl;
-
       const isVaultOnly = uploadDestination === 'PRIVATE';
 
       const res = await fetch('/api/upload-beat', {
@@ -503,7 +500,7 @@ export default function AdminPage() {
           isVaultOnly: isVaultOnly,
           assignedUser: isVaultOnly ? uploadAssignedUser : null,
           accessTier: isVaultOnly ? 'artist' : 'standard',
-          mp3Url: finalPreviewUrl,
+          mp3Url: uploadedMp3Url || '',
           wavPath: uploadedWavUrl || null,
           flpPath: uploadedFlpUrl || null,
         }),

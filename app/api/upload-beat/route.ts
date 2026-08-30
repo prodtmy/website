@@ -35,10 +35,10 @@ export async function POST(request: Request) {
       flpPath,
     } = body;
 
-    // 3. Sicherheitscheck: Sind die wichtigsten Daten da?
-    if (!title || !mp3Url) {
+    // 3. Sicherheitscheck: Mindestens eine Audio-Quelle vorhanden?
+    if (!title || (!mp3Url && !wavPath)) {
       return NextResponse.json(
-        { error: 'Missing required fields (title, mp3Url)' },
+        { error: 'Missing required fields (title and at least one audio file)' },
         { status: 400 }
       );
     }

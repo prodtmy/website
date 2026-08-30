@@ -417,6 +417,7 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
               const isOpen = !!openAccordions[track.id];
               const isPlaying = playingTrackId === track.id;
               const trackDate = track.created_at ? new Date(track.created_at).toISOString().split('T')[0] : '2026-08';
+              const hasMp3 = !!(track.mp3_url && track.mp3_url.trim() !== '' && track.mp3_url !== track.wav_path);
 
               return (
                 <div 
@@ -435,7 +436,7 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          togglePlay(track.id, track.mp3_url || track.wav_path || null);
+                          togglePlay(track.id, hasMp3 ? track.mp3_url : track.wav_path);
                         }}
                         className={`w-11 h-11 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                           isPlaying 
@@ -509,7 +510,7 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            triggerDownload(track.mp3_url, `${track.title}_PREVIEW.mp3`);
+                            triggerDownload(hasMp3 ? track.mp3_url : track.wav_path, hasMp3 ? `${track.title}_PREVIEW.mp3` : `${track.title}_MASTER.wav`);
                           }}
                           className="text-xs bg-zinc-100 hover:bg-zinc-900 hover:text-white border border-zinc-200 px-3 py-1.5 rounded transition-all uppercase font-medium flex items-center gap-1.5"
                         >
@@ -532,10 +533,12 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         {/* 1. Preview MP3 */}
                         <div 
-                          onClick={() => triggerDownload(track.mp3_url, `${track.title}_PREVIEW.mp3`)}
-                          className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer group ${
-                            track.mp3_url 
-                              ? 'bg-white hover:border-emerald-500 border-zinc-200 shadow-sm hover:shadow-md' 
+                          onClick={() => {
+                            if (hasMp3) triggerDownload(track.mp3_url, `${track.title}_PREVIEW.mp3`);
+                          }}
+                          className={`p-4 rounded-xl border text-left flex flex-col justify-between gap-3 transition-all group ${
+                            hasMp3 
+                              ? 'bg-white hover:border-emerald-500 border-zinc-200 shadow-sm hover:shadow-md cursor-pointer' 
                               : 'bg-zinc-100/60 border-zinc-200/60 opacity-50 cursor-not-allowed'
                           }`}
                         >
@@ -544,14 +547,14 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
                               <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
                               <span>PREVIEW MP3</span>
                             </span>
-                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${track.mp3_url ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-200 text-zinc-500'}`}>
-                              {track.mp3_url ? 'AVAILABLE' : 'N/A'}
+                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${hasMp3 ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-200 text-zinc-500'}`}>
+                              {hasMp3 ? 'AVAILABLE' : 'N/A'}
                             </span>
                           </div>
                           <p className="text-[10px] text-[#86868B]">320kbps Audio Preview Stream</p>
                           <div className="text-[10px] font-bold text-emerald-700 group-hover:underline flex items-center gap-1">
-                            <span>DOWNLOAD MP3</span>
-                            <span>→</span>
+                            <span>{hasMp3 ? 'DOWNLOAD MP3' : 'NOT ATTACHED'}</span>
+                            {hasMp3 && <span>→</span>}
                           </div>
                         </div>
 
