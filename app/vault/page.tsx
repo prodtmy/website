@@ -55,21 +55,26 @@ function VaultPageContent() {
     };
   }, []);
 
-  const togglePlay = (trackId: string, src: string) => {
+  const togglePlay = (trackId: string, rawSrc: string | null) => {
     if (!audioObj) return;
 
     if (playingTrackId === trackId) {
       audioObj.pause();
       setPlayingTrackId(null);
     } else {
-      audioObj.src = src;
+      if (!rawSrc) {
+        alert("Für diesen Track ist keine Audio-Datei für die Vorschau verfügbar.");
+        return;
+      }
+
+      audioObj.src = rawSrc;
       setCurrentTime(0);
       setDuration(0);
       audioObj.play().then(() => {
         setPlayingTrackId(trackId);
       }).catch(err => {
         console.error("Play error:", err);
-        alert("Audio konnte nicht abgespielt werden.");
+        alert(`Audio konnte nicht abgespielt werden (${err.message || 'Datei nicht gefunden oder Zugriffsrechte fehlen'}).`);
       });
     }
   };
@@ -390,7 +395,7 @@ function VaultPageContent() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          togglePlay(track.id, track.mp3_url);
+                          togglePlay(track.id, track.mp3_url || track.wav_path || null);
                         }}
                         className={`w-11 h-11 rounded-full border flex items-center justify-center transition-all flex-shrink-0 ${
                           isPlaying 

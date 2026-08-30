@@ -77,19 +77,24 @@ export default function AdminPage() {
     };
   }, []);
 
-  const togglePlay = (trackId: string, src: string) => {
+  const togglePlay = (trackId: string, src: string | null) => {
     if (!audioRef.current) return;
 
     if (playingTrackId === trackId) {
       audioRef.current.pause();
       setPlayingTrackId(null);
     } else {
+      if (!src) {
+        alert("Für diesen Track wurde keine Vorschau-Datei verknüpft.");
+        return;
+      }
+
       audioRef.current.src = src;
       audioRef.current.play().then(() => {
         setPlayingTrackId(trackId);
       }).catch(err => {
         console.error("Audio playback error:", err);
-        alert("Fehler beim Abspielen. Bitte überprüfe das Audioformat oder die Storage-Rechte.");
+        alert(`Fehler beim Abspielen: ${err.message || 'Audio-Datei konnte nicht geladen werden.'}`);
       });
     }
   };
