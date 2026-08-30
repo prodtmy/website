@@ -89,13 +89,22 @@ export default function AdminPage() {
         return;
       }
 
-      audioRef.current.src = src;
-      audioRef.current.play().then(() => {
-        setPlayingTrackId(trackId);
-      }).catch(err => {
-        console.error("Audio playback error:", err);
-        alert(`Fehler beim Abspielen: ${err.message || 'Audio-Datei konnte nicht geladen werden.'}`);
-      });
+      const tryPlay = (srcToTry: string, isRetry = false) => {
+        audioRef.current!.src = srcToTry;
+        audioRef.current!.play().then(() => {
+          setPlayingTrackId(trackId);
+        }).catch(err => {
+          console.error("Audio playback error:", err);
+          if (!isRetry && srcToTry.includes('/tracks/')) {
+            const fallbackSrc = srcToTry.replace('/tracks/', '/previews/');
+            tryPlay(fallbackSrc, true);
+            return;
+          }
+          alert("Audio konnte nicht geladen werden (403/404). Bitte lade die MP3-Datei im Admin-Panel neu hoch (Bucket: previews) oder stelle den Bucket 'previews' in Supabase auf Public.");
+        });
+      };
+
+      tryPlay(src);
     }
   };
 

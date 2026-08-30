@@ -67,15 +67,24 @@ function VaultPageContent() {
         return;
       }
 
-      audioObj.src = rawSrc;
-      setCurrentTime(0);
-      setDuration(0);
-      audioObj.play().then(() => {
-        setPlayingTrackId(trackId);
-      }).catch(err => {
-        console.error("Play error:", err);
-        alert(`Audio konnte nicht abgespielt werden (${err.message || 'Datei nicht gefunden oder Zugriffsrechte fehlen'}).`);
-      });
+      const tryPlay = (srcToTry: string, isRetry = false) => {
+        audioObj.src = srcToTry;
+        setCurrentTime(0);
+        setDuration(0);
+        audioObj.play().then(() => {
+          setPlayingTrackId(trackId);
+        }).catch(err => {
+          console.error("Play error:", err);
+          if (!isRetry && srcToTry.includes('/tracks/')) {
+            const fallbackSrc = srcToTry.replace('/tracks/', '/previews/');
+            tryPlay(fallbackSrc, true);
+            return;
+          }
+          alert("Audio konnte nicht geladen werden (403/404). Bitte lade die MP3-Datei im Admin-Panel neu hoch (Bucket: previews) oder stelle den Bucket 'previews' in Supabase auf Public.");
+        });
+      };
+
+      tryPlay(rawSrc);
     }
   };
 
