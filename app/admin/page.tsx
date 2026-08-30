@@ -1405,6 +1405,7 @@ export default function AdminPage() {
                       className="w-full bg-[#F5F5F7] border border-[#E8E8ED] text-xs px-3 py-2.5 focus:outline-none font-mono font-bold"
                     >
                       <option value="ARTIST">ARTIST (Private Vault Only)</option>
+                      <option value="ARTIST_FULL">ARTIST FULL (Public + Private Vault Access)</option>
                       <option value="VIP">VIP (High Priority Collab)</option>
                       <option value="PRODUCER">PRODUCER (Upload Access)</option>
                       <option value="ADMIN">ADMIN (Full Governance)</option>
@@ -1741,7 +1742,8 @@ export default function AdminPage() {
                     onChange={(e) => setEditUserRole(e.target.value)}
                     className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 font-mono font-bold rounded-md transition-all"
                   >
-                    <option value="ARTIST">ARTIST (Private Vault)</option>
+                    <option value="ARTIST">ARTIST (Private Vault Only)</option>
+                    <option value="ARTIST_FULL">ARTIST FULL (Public + Private Access)</option>
                     <option value="VIP">VIP (Collab Access)</option>
                     <option value="PRODUCER">PRODUCER (Upload Access)</option>
                     <option value="ADMIN">ADMIN (Full Governance)</option>
