@@ -72,8 +72,8 @@ export default function ArchivePage() {
       {/* Main Content */}
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-8 sm:py-12 flex flex-col justify-center gap-8">
         <section className="text-center space-y-2">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-wider text-[#1D1D1F] uppercase">
-            TMY — AUDIO ARCHIVE // VOL. 01
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-widest text-[#1D1D1F] uppercase">
+            TMY — AUDIO ARCHIVE
           </h1>
           <p className="text-xs sm:text-sm text-[#86868B]">
             Selected public previews. Full stems and unreleased loops available in the Vault.
