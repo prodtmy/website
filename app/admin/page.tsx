@@ -52,7 +52,8 @@ export default function AdminPage() {
   const [uploadBpm, setUploadBpm] = useState('');
   const [uploadKey, setUploadKey] = useState('');
   const [isAnalyzingAudio, setIsAnalyzingAudio] = useState(false);
-  const [uploadDestination, setUploadDestination] = useState<'PUBLIC' | 'PRIVATE'>('PRIVATE');
+  const [uploadDestination, setUploadDestination] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
+  const [uploadLanding, setUploadLanding] = useState<'ON' | 'OFF'>('OFF');
   const [uploadAssignedUser, setUploadAssignedUser] = useState('');
   const [mp3File, setMp3File] = useState<File | null>(null);
   const [wavFile, setWavFile] = useState<File | null>(null);
@@ -216,15 +217,20 @@ export default function AdminPage() {
       if (field === 'type') updateData.track_type = value;
       else if (field === 'vault') {
         updateData.is_vault_only = value === 'PRIVATE';
-        if (value === 'PUBLIC') updateData.assigned_user = null;
+        if (value === 'PUBLIC') updateData.access_tier = 'standard';
       }
       else if (field === 'landing') {
-        // ON ('true') -> Public (is_vault_only: false)
-        // OFF ('false') -> Private (is_vault_only: true)
-        updateData.is_vault_only = value !== 'true';
-        if (value === 'true') updateData.assigned_user = null;
+        if (value === 'true') {
+          updateData.is_vault_only = false;
+          updateData.access_tier = 'landing';
+        } else {
+          updateData.access_tier = 'standard';
+        }
       }
-      else if (field === 'assigned_user') updateData.assigned_user = value || null;
+      else if (field === 'assigned_user') {
+        updateData.is_vault_only = true;
+        updateData.access_tier = value || 'artist';
+      }
 
       const res = await fetch('/api/admin', {
         method: 'POST',
@@ -251,7 +257,7 @@ export default function AdminPage() {
     setEditKey(track.key || '');
     setEditCredits(track.credits || 'PROD. TMY');
     setEditDestination(track.is_vault_only ? 'PRIVATE' : 'PUBLIC');
-    setEditLanding(!track.is_vault_only ? 'true' : 'false');
+    setEditLanding(track.access_tier === 'landing' ? 'true' : 'false');
     setEditAssignedUser(track.assigned_user || '');
     setEditMp3File(null);
     setEditWavFile(null);
@@ -307,7 +313,10 @@ export default function AdminPage() {
         flpPath = await uploadFileViaApi(editFlpFile, 'tracks', 'stems');
       }
 
-      const isVaultOnly = editLanding === 'false' || editDestination === 'PRIVATE';
+      const isVaultOnly = editDestination === 'PRIVATE';
+      const computedAccessTier = isVaultOnly
+        ? (editAssignedUser || 'artist')
+        : (editLanding === 'true' ? 'landing' : 'standard');
 
       const res = await fetch('/api/admin', {
         method: 'POST',
@@ -319,15 +328,14 @@ export default function AdminPage() {
             updateData: {
               title: editTitle,
               track_type: editType,
-              bpm: parseInt(String(editBpm), 10),
-              key: editKey,
+              bpm: editBpm ? parseInt(String(editBpm), 10) : null,
+              key: editKey || null,
               credits: editCredits,
               is_vault_only: isVaultOnly,
-              is_landing: editLanding === 'true',
-              assigned_user: isVaultOnly ? (editAssignedUser || null) : null,
-              mp3_url: mp3Url,
-              wav_path: wavPath,
-              flp_path: flpPath,
+              access_tier: computedAccessTier,
+              ...(mp3Url && { mp3_url: mp3Url }),
+              ...(wavPath && { wav_path: wavPath }),
+              ...(flpPath && { flp_path: flpPath }),
             }
           }
         })
@@ -493,6 +501,9 @@ export default function AdminPage() {
       setUploadProgress(90);
 
       const isVaultOnly = uploadDestination === 'PRIVATE';
+      const computedAccessTier = isVaultOnly
+        ? (uploadAssignedUser || 'artist')
+        : (uploadLanding === 'ON' ? 'landing' : 'standard');
 
       const res = await fetch('/api/upload-beat', {
         method: 'POST',
@@ -504,7 +515,7 @@ export default function AdminPage() {
           key: uploadKey,
           isVaultOnly: isVaultOnly,
           assignedUser: isVaultOnly ? uploadAssignedUser : null,
-          accessTier: isVaultOnly ? 'artist' : 'standard',
+          accessTier: computedAccessTier,
           mp3Url: uploadedMp3Url || '',
           wavPath: uploadedWavUrl || null,
           flpPath: uploadedFlpUrl || null,
@@ -890,11 +901,11 @@ export default function AdminPage() {
                                   <div className="flex items-center gap-1.5">
                                     <span className="text-[10px] font-bold text-[#86868B] uppercase">LANDING PAGE:</span>
                                     <select
-                                      value={!track.is_vault_only ? 'true' : 'false'}
+                                      value={track.access_tier === 'landing' ? 'true' : 'false'}
                                       onChange={(e) => handleUpdateTrackField(track.id, 'landing', e.target.value)}
                                       className="bg-transparent border-none text-xs focus:outline-none font-mono rounded cursor-pointer font-bold"
                                     >
-                                      <option value="true">ON (VISIBLE)</option>
+                                      <option value="true">ON (FEATURED)</option>
                                       <option value="false">OFF (HIDDEN)</option>
                                     </select>
                                   </div>
@@ -1198,7 +1209,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold uppercase text-zinc-900">[ TARGET VAULT ]</label>
                     <select 
@@ -1212,8 +1223,21 @@ export default function AdminPage() {
                       }}
                       className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono font-bold rounded-md transition-all"
                     >
-                      <option value="PUBLIC">PUBLIC VAULT (All Authorized Users & Landing)</option>
+                      <option value="PUBLIC">PUBLIC VAULT (All Vault Users)</option>
                       <option value="PRIVATE">PRIVATE VAULT (Assigned User Only)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold uppercase text-zinc-900">[ LANDING PAGE FEATURED ]</label>
+                    <select 
+                      value={uploadLanding} 
+                      onChange={(e: any) => setUploadLanding(e.target.value)}
+                      disabled={uploadDestination === 'PRIVATE'}
+                      className="w-full bg-zinc-50 border border-zinc-200 text-xs px-3.5 py-2.5 focus:outline-none focus:border-zinc-900 focus:bg-white font-mono font-bold rounded-md transition-all disabled:opacity-40"
+                    >
+                      <option value="OFF">OFF (HIDDEN FROM LANDING PAGE)</option>
+                      <option value="ON">ON (FEATURED ON LANDING PAGE)</option>
                     </select>
                   </div>
                   

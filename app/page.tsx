@@ -23,7 +23,8 @@ export default function ArchivePage() {
         if (error) throw error;
 
         if (data && data.length > 0) {
-          setTracks(data);
+          const landingTracks = data.filter((t: any) => t.access_tier === 'landing');
+          setTracks(landingTracks);
         }
       } catch (err) {
         console.error('Error fetching public tracks:', err);
