@@ -199,7 +199,7 @@ export default function AdminPage() {
     if (typeof document !== 'undefined') {
       document.cookie = "vault_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     }
-    window.location.reload();
+    window.location.href = '/';
   };
 
   // Toggle Accordion in Vault Manager
@@ -697,7 +697,7 @@ export default function AdminPage() {
               type="text"
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
-              placeholder="ENTER MASTER KEY (e.g. ADMIN2026)..."
+              placeholder="ENTER MASTER KEY..."
               className="w-full bg-transparent border-b-2 border-[#1D1D1F] text-[#1D1D1F] placeholder-[#86868B] text-base sm:text-lg py-3 px-1 focus:outline-none transition-colors font-mono rounded-none tracking-widest uppercase"
               autoComplete="off"
               required

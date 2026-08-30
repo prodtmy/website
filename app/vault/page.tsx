@@ -154,7 +154,7 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
     if (typeof document !== 'undefined') {
       document.cookie = "vault_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
     }
-    window.location.href = '/vault';
+    window.location.href = '/';
   };
 
   // 1. Authorization Gate
@@ -262,51 +262,41 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
           </div>
         </header>
 
-        <main className="flex-1 w-full max-w-md mx-auto flex flex-col justify-center items-center p-6 animate-fadeIn">
-          <div className="w-full bg-white border border-[#E8E8ED] rounded-2xl shadow-xl p-8 sm:p-10 space-y-6 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100 border border-zinc-200 text-zinc-800 mb-1">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            </div>
-
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest block">[ RESTRICTED ACCESS SECTOR ]</span>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-900">AUTHORIZATION REQUIRED</h2>
-              <p className="text-xs text-zinc-500 leading-relaxed max-w-xs mx-auto">
-                Enter your assigned access key to unlock unreleased audio previews, studio masters, and FL Studio stems.
-              </p>
-            </div>
-            
-            <form 
-              onSubmit={(e) => { 
-                e.preventDefault(); 
-                if (keyInput.trim()) {
-                  window.location.href = `/vault?key=${keyInput.trim().toUpperCase()}`; 
-                }
-              }} 
-              className="space-y-4 pt-2"
-            >
-              <div className="relative">
-                <input 
-                  name="vaultKey"
-                  type="text" 
-                  value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
-                  placeholder="ENTER ACCESS KEY..." 
-                  className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder-zinc-400 text-sm py-3.5 px-4 focus:outline-none focus:border-zinc-900 focus:bg-white transition-all font-mono rounded-xl text-center tracking-widest uppercase font-semibold shadow-inner"
-                  autoComplete="off"
-                  required
-                />
-              </div>
-              
-              <button 
-                type="submit" 
-                className="w-full text-xs font-bold bg-zinc-900 text-white hover:bg-black py-3.5 px-6 rounded-xl transition-all shadow-md hover:shadow-lg uppercase tracking-widest flex items-center justify-center gap-2 group"
-              >
-                <span>[ UNLOCK VAULT ]</span>
-                <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-              </button>
-            </form>
+        <main className="flex-1 w-full max-w-lg mx-auto flex flex-col justify-center gap-6 p-6 text-center sm:text-left">
+          <div className="flex items-center justify-center sm:justify-start gap-2">
+            <span className="text-xs font-bold text-[#86868B] uppercase tracking-widest">[ SYSTEM // AUTHORIZATION REQUIRED ]</span>
           </div>
+          
+          <p className="text-xs sm:text-sm text-[#1D1D1F] leading-relaxed">
+            RESTRICTED AREA. Enter an active authorization key to access unreleased loops, stems, and project files.
+          </p>
+          
+          <form 
+            onSubmit={(e) => { 
+              e.preventDefault(); 
+              if (keyInput.trim()) {
+                window.location.href = `/vault?key=${keyInput.trim().toUpperCase()}`; 
+              }
+            }} 
+            className="flex flex-col gap-4 mt-2"
+          >
+            <input 
+              name="vaultKey"
+              type="text" 
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              placeholder="ENTER ACCESS KEY..." 
+              className="w-full bg-transparent border-b-2 border-[#1D1D1F] text-[#1D1D1F] placeholder-[#86868B] text-base sm:text-lg py-3 px-1 focus:outline-none transition-colors font-mono rounded-none tracking-widest uppercase"
+              autoComplete="off"
+              required
+            />
+            
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              <button type="submit" className="flex-1 text-xs font-bold bg-[#1D1D1F] text-white px-6 py-3.5 hover:bg-black transition-colors uppercase tracking-widest">
+                [ VERIFY KEY ]
+              </button>
+            </div>
+          </form>
         </main>
 
         <footer className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between text-[10px] text-[#86868B] border-t border-[#E8E8ED]">
