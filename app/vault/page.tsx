@@ -114,19 +114,40 @@ function ensurePublicUrl(url: string | null | undefined): string | null {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const triggerDownload = (url: string | null, defaultFilename: string) => {
+  const triggerDownload = async (url: string | null, defaultFilename: string) => {
     const sanitizedUrl = ensurePublicUrl(url);
     if (!sanitizedUrl) {
       alert("Diese Datei steht für diesen Track nicht zur Verfügung.");
       return;
     }
-    const link = document.createElement('a');
-    link.href = sanitizedUrl;
-    link.download = defaultFilename;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    try {
+      // 1. Fetch file binary directly into browser blob memory
+      const response = await fetch(sanitizedUrl);
+      if (!response.ok) throw new Error("Download Error");
+      const blob = await response.blob();
+
+      // 2. Create local same-origin blob URL (bypasses Safari cross-origin player tab)
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = defaultFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up local blob URL after download initiates
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+    } catch (err) {
+      // Fallback
+      const link = document.createElement('a');
+      link.href = sanitizedUrl;
+      link.download = defaultFilename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const handleLogout = () => {
